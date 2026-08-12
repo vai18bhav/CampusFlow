@@ -1,0 +1,404 @@
+-- CampusFlow Database Schema
+-- Database Name: campusflow_db
+-- MySQL Version: 8.0+
+
+CREATE DATABASE IF NOT EXISTS campusflow_db;
+USE campusflow_db;
+
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP TABLE IF EXISTS audit_logs;
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS coupons;
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS installments;
+DROP TABLE IF EXISTS invoices;
+DROP TABLE IF EXISTS mock_interviews;
+DROP TABLE IF EXISTS assignment_submissions;
+DROP TABLE IF EXISTS assignments;
+DROP TABLE IF EXISTS attendance;
+DROP TABLE IF EXISTS admissions;
+DROP TABLE IF EXISTS inquiries;
+DROP TABLE IF EXISTS leads;
+DROP TABLE IF EXISTS batch_students;
+DROP TABLE IF EXISTS batches;
+DROP TABLE IF EXISTS courses;
+DROP TABLE IF EXISTS support_executives;
+DROP TABLE IF EXISTS sales_executives;
+DROP TABLE IF EXISTS trainers;
+DROP TABLE IF EXISTS students;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS roles;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- 1. ROLES TABLE
+CREATE TABLE roles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE,
+    description VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 2. USERS TABLE
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    role_id INT NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
+    email VARCHAR(120) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    phone VARCHAR(20),
+    status ENUM('PENDING', 'ACTIVE', 'INACTIVE', 'SUSPENDED') DEFAULT 'PENDING',
+    avatar_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 3. STUDENTS TABLE
+CREATE TABLE students (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    roll_number VARCHAR(50) NOT NULL UNIQUE,
+    dob DATE,
+    gender ENUM('MALE', 'FEMALE', 'OTHER'),
+    address TEXT,
+    qualification VARCHAR(100),
+    guardian_name VARCHAR(100),
+    guardian_phone VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 4. TRAINERS TABLE
+CREATE TABLE trainers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    employee_id VARCHAR(50) NOT NULL UNIQUE,
+    specialization VARCHAR(150),
+    qualification VARCHAR(100),
+    experience_years INT DEFAULT 0,
+    bio TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 5. SALES EXECUTIVES TABLE
+CREATE TABLE sales_executives (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    employee_id VARCHAR(50) NOT NULL UNIQUE,
+    target_conversions INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 6. SUPPORT EXECUTIVES TABLE
+CREATE TABLE support_executives (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    employee_id VARCHAR(50) NOT NULL UNIQUE,
+    department VARCHAR(100) DEFAULT 'General Support',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 7. COURSES TABLE
+CREATE TABLE courses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(150) NOT NULL,
+    category VARCHAR(100) DEFAULT 'Web Development',
+    description TEXT,
+    duration_weeks INT NOT NULL,
+    fee_amount DECIMAL(10,2) NOT NULL,
+    status ENUM('ACTIVE', 'INACTIVE', 'ARCHIVED') DEFAULT 'ACTIVE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 8. BATCHES TABLE
+CREATE TABLE batches (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    course_id INT NOT NULL,
+    trainer_id INT,
+    batch_code VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(150) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE,
+    timing VARCHAR(100),
+    start_time VARCHAR(20),
+    end_time VARCHAR(20),
+    room_number VARCHAR(50),
+    mode ENUM('ONLINE', 'OFFLINE', 'HYBRID') DEFAULT 'OFFLINE',
+    max_students INT DEFAULT 30,
+    description TEXT,
+    status ENUM('UPCOMING', 'ONGOING', 'COMPLETED', 'CANCELLED', 'INACTIVE') DEFAULT 'UPCOMING',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE RESTRICT,
+    FOREIGN KEY (trainer_id) REFERENCES trainers(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 9. BATCH STUDENTS TABLE
+CREATE TABLE batch_students (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    batch_id INT NOT NULL,
+    student_id INT NOT NULL,
+    enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('ENROLLED', 'COMPLETED', 'DROPPED') DEFAULT 'ENROLLED',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_batch_student (batch_id, student_id),
+    FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 10. LEADS TABLE
+CREATE TABLE leads (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    sales_exec_id INT,
+    candidate_name VARCHAR(100) NOT NULL,
+    email VARCHAR(120) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    course_id INT,
+    lead_source ENUM('WEBSITE', 'REFERRAL', 'SOCIAL_MEDIA', 'WALK_IN', 'OTHER') DEFAULT 'WEBSITE',
+    status ENUM('NEW', 'CONTACTED', 'IN_PROGRESS', 'CONVERTED', 'LOST') DEFAULT 'NEW',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (sales_exec_id) REFERENCES sales_executives(id) ON DELETE SET NULL,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 11. INQUIRIES TABLE
+CREATE TABLE inquiries (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    lead_id INT,
+    student_id INT,
+    inquiry_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    query TEXT NOT NULL,
+    response TEXT,
+    status ENUM('PENDING', 'RESOLVED', 'CLOSED') DEFAULT 'PENDING',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 12. ADMISSIONS TABLE
+CREATE TABLE admissions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    admission_number VARCHAR(50) NOT NULL UNIQUE,
+    lead_id INT,
+    student_id INT NOT NULL,
+    course_id INT NOT NULL,
+    batch_id INT NOT NULL,
+    admission_date DATE NOT NULL,
+    total_fee DECIMAL(10,2) NOT NULL,
+    discount_amount DECIMAL(10,2) DEFAULT 0.00,
+    final_fee DECIMAL(10,2) NOT NULL,
+    status ENUM('PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED') DEFAULT 'CONFIRMED',
+    remarks TEXT,
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE SET NULL,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE RESTRICT,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE RESTRICT,
+    FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE RESTRICT,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 13. ATTENDANCE TABLE
+CREATE TABLE attendance (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    batch_id INT NOT NULL,
+    student_id INT NOT NULL,
+    date DATE NOT NULL,
+    status ENUM('PRESENT', 'ABSENT', 'LATE', 'LEAVE', 'EXCUSED') DEFAULT 'PRESENT',
+    marked_by INT,
+    remarks VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_attendance (batch_id, student_id, date),
+    FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+    FOREIGN KEY (marked_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 14. ASSIGNMENTS TABLE
+CREATE TABLE assignments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    course_id INT,
+    batch_id INT NOT NULL,
+    trainer_id INT NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    description TEXT,
+    instructions TEXT,
+    due_date DATETIME NOT NULL,
+    deadline DATETIME,
+    total_marks INT DEFAULT 100,
+    max_marks INT DEFAULT 100,
+    status ENUM('DRAFT', 'PUBLISHED', 'CLOSED') DEFAULT 'PUBLISHED',
+    file_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE,
+    FOREIGN KEY (trainer_id) REFERENCES trainers(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 15. ASSIGNMENT SUBMISSIONS TABLE
+CREATE TABLE assignment_submissions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    assignment_id INT NOT NULL,
+    student_id INT NOT NULL,
+    submission_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    submission_text TEXT,
+    submission_url VARCHAR(255),
+    file_url VARCHAR(255),
+    marks_obtained INT,
+    feedback TEXT,
+    status ENUM('PENDING', 'SUBMITTED', 'LATE', 'REVIEWED', 'GRADED', 'REJECTED') DEFAULT 'SUBMITTED',
+    evaluated_by INT,
+    reviewed_by INT,
+    reviewed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_assignment_student (assignment_id, student_id),
+    FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+    FOREIGN KEY (evaluated_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 16. MOCK INTERVIEWS TABLE
+CREATE TABLE mock_interviews (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    trainer_id INT NOT NULL,
+    batch_id INT,
+    scheduled_date DATETIME NOT NULL,
+    topic VARCHAR(150) NOT NULL,
+    score INT,
+    status ENUM('SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW') DEFAULT 'SCHEDULED',
+    feedback TEXT,
+    key_strengths TEXT,
+    areas_for_improvement TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+    FOREIGN KEY (trainer_id) REFERENCES trainers(id) ON DELETE CASCADE,
+    FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 17. INVOICES TABLE
+CREATE TABLE invoices (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    admission_id INT NOT NULL,
+    student_id INT NOT NULL,
+    course_id INT,
+    invoice_number VARCHAR(50) NOT NULL UNIQUE,
+    total_amount DECIMAL(10,2) NOT NULL,
+    discount_amount DECIMAL(10,2) DEFAULT 0.00,
+    tax_amount DECIMAL(10,2) DEFAULT 0.00,
+    net_amount DECIMAL(10,2) NOT NULL,
+    paid_amount DECIMAL(10,2) DEFAULT 0.00,
+    due_amount DECIMAL(10,2) NOT NULL,
+    invoice_date DATE,
+    due_date DATE NOT NULL,
+    status ENUM('UNPAID', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'CANCELLED') DEFAULT 'UNPAID',
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (admission_id) REFERENCES admissions(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE RESTRICT,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 18. INSTALLMENTS TABLE
+CREATE TABLE installments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    invoice_id INT NOT NULL,
+    installment_number INT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    paid_amount DECIMAL(10,2) DEFAULT 0.00,
+    pending_amount DECIMAL(10,2),
+    due_date DATE NOT NULL,
+    paid_date DATE,
+    payment_mode ENUM('CASH', 'UPI', 'CARD', 'BANK_TRANSFER', 'ONLINE', 'OTHER') DEFAULT 'ONLINE',
+    transaction_id VARCHAR(100),
+    status ENUM('PENDING', 'PARTIALLY_PAID', 'PAID', 'OVERDUE') DEFAULT 'PENDING',
+    remarks VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 18B. PAYMENTS TABLE
+CREATE TABLE payments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    invoice_id INT NOT NULL,
+    installment_id INT,
+    student_id INT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    payment_date DATE NOT NULL,
+    payment_method ENUM('CASH', 'UPI', 'CARD', 'BANK_TRANSFER', 'ONLINE', 'OTHER') DEFAULT 'UPI',
+    transaction_reference VARCHAR(100),
+    remarks TEXT,
+    received_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
+    FOREIGN KEY (installment_id) REFERENCES installments(id) ON DELETE SET NULL,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE RESTRICT,
+    FOREIGN KEY (received_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 19. COUPONS TABLE
+CREATE TABLE coupons (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    discount_type ENUM('PERCENTAGE', 'FIXED') DEFAULT 'PERCENTAGE',
+    discount_value DECIMAL(10,2) NOT NULL,
+    valid_until DATE,
+    max_uses INT DEFAULT 100,
+    current_uses INT DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 20. NOTIFICATIONS TABLE
+CREATE TABLE notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    message TEXT NOT NULL,
+    type ENUM('GENERAL', 'ASSIGNMENT', 'ATTENDANCE', 'INTERVIEW', 'FEE', 'ADMISSION', 'ANNOUNCEMENT', 'SYSTEM') DEFAULT 'GENERAL',
+    reference_type VARCHAR(50),
+    reference_id INT,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 21. AUDIT LOGS TABLE
+CREATE TABLE audit_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(50),
+    entity_id INT,
+    ip_address VARCHAR(45),
+    details TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

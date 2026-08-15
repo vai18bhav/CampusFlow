@@ -23,6 +23,10 @@ import Users from '../pages/Users';
 
 import Inquiries from '../pages/Inquiries';
 import Notices from '../pages/Notices';
+import Timetable from '../pages/Timetable';
+import Documents from '../pages/Documents';
+import Placements from '../pages/Placements';
+import Certificates from '../pages/Certificates';
 import NotFound from '../pages/NotFound';
 
 const ProtectedRoute = ({ children }) => {
@@ -74,6 +78,10 @@ const AppRoutes = () => {
         <Route path="/reports" element={<Reports />} />
         <Route path="/users" element={<Users />} />
         <Route path="/notices" element={<Notices />} />
+        <Route path="/timetable" element={<Timetable />} />
+        <Route path="/documents" element={<Documents />} />
+        <Route path="/placements" element={<Placements />} />
+        <Route path="/certificates" element={<Certificates />} />
         <Route path="/settings" element={<MyProfile />} />
       </Route>
 

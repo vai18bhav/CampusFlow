@@ -19,6 +19,11 @@ const financeRoutes = require('./routes/financeRoutes');
 const interviewRoutes = require('./routes/interviewRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const followupRoutes = require('./routes/followupRoutes');
+const timetableRoutes = require('./routes/timetableRoutes');
+const documentRoutes = require('./routes/documentRoutes');
+const placementRoutes = require('./routes/placementRoutes');
+const certificateRoutes = require('./routes/certificateRoutes');
 
 const app = express();
 
@@ -67,6 +72,11 @@ app.use('/api/installments', financeRoutes);
 app.use('/api/mock-interviews', interviewRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/leads', followupRoutes);
+app.use('/api/timetable', timetableRoutes);
+app.use('/api/documents', documentRoutes);
+app.use('/api/placements', placementRoutes);
+app.use('/api/certificates', certificateRoutes);
 
 // Error Handling Middleware
 app.use(notFoundHandler);

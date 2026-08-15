@@ -37,6 +37,12 @@ const Sidebar = ({ isOpen, onClose }) => {
           <NavLink to="/mock-interviews" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
             <div className="cf-nav-item-content"><i className="bi bi-mic"></i><span>Mock Interviews</span></div>
           </NavLink>
+          <NavLink to="/timetable" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
+            <div className="cf-nav-item-content"><i className="bi bi-calendar3"></i><span>My Timetable</span></div>
+          </NavLink>
+          <NavLink to="/certificates" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
+            <div className="cf-nav-item-content"><i className="bi bi-award"></i><span>My Certificate</span></div>
+          </NavLink>
         </>
       );
     }
@@ -62,6 +68,12 @@ const Sidebar = ({ isOpen, onClose }) => {
           </NavLink>
           <NavLink to="/mock-interviews" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
             <div className="cf-nav-item-content"><i className="bi bi-mic"></i><span>Mock Interviews</span></div>
+          </NavLink>
+          <NavLink to="/timetable" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
+            <div className="cf-nav-item-content"><i className="bi bi-calendar3"></i><span>Batch Timetable</span></div>
+          </NavLink>
+          <NavLink to="/placements" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
+            <div className="cf-nav-item-content"><i className="bi bi-briefcase"></i><span>Placement Tracker</span></div>
           </NavLink>
         </>
       );
@@ -146,6 +158,20 @@ const Sidebar = ({ isOpen, onClose }) => {
         </NavLink>
         <NavLink to="/reports" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
           <div className="cf-nav-item-content"><i className="bi bi-graph-up-arrow"></i><span>Reports & Analytics</span></div>
+        </NavLink>
+
+        <div className="cf-sidebar-section-title">TRAINING OUTCOMES</div>
+        <NavLink to="/timetable" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
+          <div className="cf-nav-item-content"><i className="bi bi-calendar3"></i><span>Batch Timetable</span></div>
+        </NavLink>
+        <NavLink to="/documents" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
+          <div className="cf-nav-item-content"><i className="bi bi-folder2-open"></i><span>Document Manager</span></div>
+        </NavLink>
+        <NavLink to="/placements" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
+          <div className="cf-nav-item-content"><i className="bi bi-briefcase"></i><span>Placement Tracker</span></div>
+        </NavLink>
+        <NavLink to="/certificates" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
+          <div className="cf-nav-item-content"><i className="bi bi-award"></i><span>Certificates</span></div>
         </NavLink>
       </>
     );

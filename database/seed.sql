@@ -122,3 +122,14 @@ INSERT INTO notifications (id, user_id, title, message, type, reference_type, re
 INSERT INTO coupons (code, discount_type, discount_value, valid_until, max_uses, current_uses, is_active) VALUES
 ('EARLYBIRD2026', 'PERCENTAGE', 10.00, '2026-12-31', 50, 3, TRUE),
 ('FLAT100', 'FIXED', 100.00, '2026-12-31', 100, 5, TRUE);
+
+-- 16. STUDENT WALLET — Seed 10,000 welcome coins for all seeded students
+-- student_id 1 and 2 are the seeded students
+INSERT INTO student_wallet (student_id, coins_balance, total_earned, total_spent) VALUES
+(1, 10000, 10000, 0),
+(2, 10000, 10000, 0);
+
+INSERT INTO coin_transactions (student_id, type, coins, balance_after, reason, reference_type) VALUES
+(1, 'CREDIT', 10000, 10000, '🎁 Welcome Bonus — 10,000 coins credited on registration', 'WELCOME_BONUS'),
+(2, 'CREDIT', 10000, 10000, '🎁 Welcome Bonus — 10,000 coins credited on registration', 'WELCOME_BONUS');
+

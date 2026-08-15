@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const pool = require('../config/db');
 const { successResponse, errorResponse } = require('../utils/responseHelper');
 const { sendStudentWelcomeEmail } = require('../utils/emailService');
+const { initStudentWallet } = require('./walletController');
 
 /**
  * Get All Users (Admin / Super Admin)
@@ -83,7 +84,7 @@ const createUser = async (req, res) => {
     // Create role specific record
     if (roleName === 'STUDENT') {
       const rollNumber = role_data?.roll_number || `STU-${new Date().getFullYear()}-${String(userId).padStart(3, '0')}`;
-      await connection.query(
+      const [stuResult] = await connection.query(
         'INSERT INTO students (user_id, roll_number, dob, gender, address, qualification, guardian_name, guardian_phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [
           userId,
@@ -96,6 +97,9 @@ const createUser = async (req, res) => {
           role_data?.guardian_phone || null
         ]
       );
+      // 🪙 Give 10,000 welcome coins to every new student
+      const newStudentId = stuResult.insertId;
+      await initStudentWallet(connection, newStudentId, req.user?.id || null);
     } else if (roleName === 'TRAINER') {
       const empId = role_data?.employee_id || `EMP-TRN-${String(userId).padStart(3, '0')}`;
       await connection.query(

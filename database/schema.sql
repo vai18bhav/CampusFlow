@@ -8,6 +8,9 @@ USE campusflow_db;
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS audit_logs;
+DROP TABLE IF EXISTS coin_transactions;
+DROP TABLE IF EXISTS student_wallet;
+DROP TABLE IF EXISTS enrollment_requests;
 DROP TABLE IF EXISTS certificates;
 DROP TABLE IF EXISTS placements;
 DROP TABLE IF EXISTS student_documents;
@@ -500,17 +503,47 @@ CREATE TABLE certificates (
     FOREIGN KEY (issued_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 27. ENROLLMENT REQUESTS TABLE
+-- 27. STUDENT WALLET TABLE
+-- Each student has a coin balance. New students receive 10,000 bonus coins on registration.
+CREATE TABLE student_wallet (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL UNIQUE,
+    coins_balance INT NOT NULL DEFAULT 0,
+    total_earned INT NOT NULL DEFAULT 0,
+    total_spent INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 28. COIN TRANSACTIONS TABLE
+-- Full audit trail of every coin credit/debit for each student
+CREATE TABLE coin_transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    type ENUM('CREDIT','DEBIT') NOT NULL,
+    coins INT NOT NULL,
+    balance_after INT NOT NULL,
+    reason VARCHAR(255) NOT NULL,
+    reference_type VARCHAR(50),
+    reference_id INT,
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 29. ENROLLMENT REQUESTS TABLE
 -- Students request to enroll in a course; admin approves/rejects and assigns a batch
-DROP TABLE IF EXISTS enrollment_requests;
 CREATE TABLE enrollment_requests (
     id INT AUTO_INCREMENT PRIMARY KEY,
     student_id INT NOT NULL,
     course_id INT NOT NULL,
-    batch_id INT,                          -- filled by admin on approval
-    message TEXT,                          -- student's note / reason
+    batch_id INT,
+    message TEXT,
     status ENUM('PENDING','APPROVED','REJECTED') DEFAULT 'PENDING',
-    admin_remarks TEXT,                    -- admin's note on decision
+    admin_remarks TEXT,
+    coins_deducted INT DEFAULT 0,
     reviewed_by INT,
     reviewed_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -520,4 +553,5 @@ CREATE TABLE enrollment_requests (
     FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE SET NULL,
     FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 

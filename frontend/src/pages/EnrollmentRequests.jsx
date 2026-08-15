@@ -195,6 +195,33 @@ export default function EnrollmentRequests() {
               </div>
             </div>
             <form onSubmit={handleApprove} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Coin info */}
+              <div style={{ padding: '1rem', borderRadius: '12px', background: 'linear-gradient(135deg, #7c3aed10, #f59e0b10)', border: '1px solid #f59e0b30' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>COINS TO DEDUCT</div>
+                    <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#f59e0b' }}>🪙 {Math.round(parseFloat(approveModal.fee_amount || 0)).toLocaleString()}</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>STUDENT BALANCE</div>
+                    <div style={{ fontSize: '1.3rem', fontWeight: 900, color: (approveModal.student_coins ?? 0) >= Math.round(parseFloat(approveModal.fee_amount || 0)) ? '#10b981' : '#ef4444' }}>
+                      🪙 {(approveModal.student_coins ?? 0).toLocaleString()}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>AFTER DEDUCTION</div>
+                    <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#6b7280' }}>
+                      🪙 {Math.max(0, (approveModal.student_coins ?? 0) - Math.round(parseFloat(approveModal.fee_amount || 0))).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+                {(approveModal.student_coins ?? 0) < Math.round(parseFloat(approveModal.fee_amount || 0)) && (
+                  <div style={{ marginTop: '0.7rem', padding: '0.5rem 0.8rem', borderRadius: '8px', background: '#fee2e2', color: '#ef4444', fontSize: '0.8rem', fontWeight: 600 }}>
+                    ⚠ Student has insufficient coins! Approval will fail.
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>Select Batch *</label>
                 <select value={approveForm.batch_id} onChange={e => setApproveForm({ ...approveForm, batch_id: e.target.value })} required

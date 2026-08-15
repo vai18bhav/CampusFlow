@@ -25,6 +25,7 @@ const documentRoutes = require('./routes/documentRoutes');
 const placementRoutes = require('./routes/placementRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
 const enrollmentRoutes = require('./routes/enrollmentRoutes');
+const walletRoutes = require('./routes/walletRoutes');
 
 const app = express();
 
@@ -79,6 +80,7 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/placements', placementRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
+app.use('/api/wallet', walletRoutes);
 
 // Error Handling Middleware
 app.use(notFoundHandler);

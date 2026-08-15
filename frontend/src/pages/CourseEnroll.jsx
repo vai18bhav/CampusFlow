@@ -10,38 +10,47 @@ const STATUS_CONFIG = {
 export default function CourseEnroll() {
   const [courses, setCourses] = useState([]);
   const [myRequests, setMyRequests] = useState([]);
+  const [wallet, setWallet] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(null);
   const [toast, setToast] = useState(null);
   const [search, setSearch] = useState('');
-  const [showModal, setShowModal] = useState(null); // course to enroll in
+  const [showModal, setShowModal] = useState(null);
   const [message, setMessage] = useState('');
 
-  const showToast = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500); };
+  const showToast = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 4000); };
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [cRes, rRes] = await Promise.all([
+      const [cRes, rRes, wRes] = await Promise.all([
         api.get('/courses'),
-        api.get('/enrollments')
+        api.get('/enrollments'),
+        api.get('/wallet/my').catch(() => ({ data: { wallet: null } }))
       ]);
       setCourses(cRes.data?.courses || []);
       setMyRequests(rRes.data?.requests || []);
-    } catch (e) { }
+      setWallet(wRes.data?.wallet || null);
+    } catch (e) {}
     setLoading(false);
   };
 
   useEffect(() => { fetchData(); }, []);
 
   const getRequestStatus = (courseId) => myRequests.find(r => r.course_id === courseId);
+  const coinBalance = wallet?.coins_balance ?? 0;
 
   const handleEnrollSubmit = async (e) => {
     e.preventDefault();
+    const coinsRequired = Math.round(parseFloat(showModal.fee_amount || 0));
+    if (coinsRequired > coinBalance) {
+      showToast(`❌ Insufficient coins! You need ${coinsRequired} 🪙 but have ${coinBalance} 🪙. Please contact admin.`, 'error');
+      return;
+    }
     setSubmitting(showModal.id);
     try {
       await api.post('/enrollments', { course_id: showModal.id, message });
-      showToast(`✅ Enrollment request sent for "${showModal.name}"! Admin will review shortly.`);
+      showToast(`✅ Enrollment request sent for "${showModal.name}"! Admin will review and deduct ${coinsRequired} 🪙 on approval.`);
       setShowModal(null);
       setMessage('');
       fetchData();
@@ -60,17 +69,27 @@ export default function CourseEnroll() {
   return (
     <div style={{ padding: '1.5rem' }}>
       {toast && (
-        <div style={{ position: 'fixed', top: '1rem', right: '1rem', padding: '0.85rem 1.4rem', borderRadius: '10px', background: toast.type === 'error' ? '#ef4444' : '#10b981', color: '#fff', fontWeight: 600, zIndex: 9999, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', maxWidth: '380px' }}>
+        <div style={{ position: 'fixed', top: '1rem', right: '1rem', padding: '0.85rem 1.4rem', borderRadius: '10px', background: toast.type === 'error' ? '#ef4444' : '#10b981', color: '#fff', fontWeight: 600, zIndex: 9999, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', maxWidth: '400px', lineHeight: 1.4 }}>
           {toast.msg}
         </div>
       )}
 
-      {/* Header */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h2 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, background: 'linear-gradient(135deg, #3b82f6, #10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          📚 Enroll in a Course
-        </h2>
-        <p style={{ margin: '0.3rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>Browse available courses and submit your enrollment request. Admin approval required.</p>
+      {/* Header with wallet balance */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, background: 'linear-gradient(135deg, #3b82f6, #10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            📚 Enroll in a Course
+          </h2>
+          <p style={{ margin: '0.3rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>Browse courses and submit your enrollment request. Coins are deducted on admin approval.</p>
+        </div>
+        {/* Coin Balance Badge */}
+        <div style={{ padding: '0.8rem 1.4rem', borderRadius: '14px', background: 'linear-gradient(135deg, #7c3aed15, #f59e0b15)', border: '1.5px solid #f59e0b40', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <span style={{ fontSize: '1.5rem' }}>🪙</span>
+          <div>
+            <div style={{ fontWeight: 900, fontSize: '1.3rem', color: '#f59e0b', lineHeight: 1 }}>{coinBalance.toLocaleString('en-IN')}</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>Coin Balance</div>
+          </div>
+        </div>
       </div>
 
       {/* My Requests Summary */}
@@ -85,6 +104,7 @@ export default function CourseEnroll() {
                   <div>
                     <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{req.course_name}</div>
                     {req.batch_name && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Batch: {req.batch_name}</div>}
+                    {req.coins_deducted > 0 && <div style={{ fontSize: '0.78rem', color: '#7c3aed', fontWeight: 600 }}>🪙 {req.coins_deducted.toLocaleString()} coins deducted</div>}
                     {req.admin_remarks && <div style={{ fontSize: '0.78rem', color: '#6b7280', fontStyle: 'italic' }}>Admin: {req.admin_remarks}</div>}
                   </div>
                   <span style={{ padding: '0.3rem 0.9rem', borderRadius: '999px', fontSize: '0.8rem', fontWeight: 700, background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.color}40` }}>
@@ -110,13 +130,14 @@ export default function CourseEnroll() {
           {filtered.map(course => {
             const existing = getRequestStatus(course.id);
             const cfg = existing ? STATUS_CONFIG[existing.status] : null;
+            const coinsRequired = Math.round(parseFloat(course.fee_amount || 0));
+            const canAfford = coinBalance >= coinsRequired;
 
             return (
               <div key={course.id} style={{ borderRadius: '16px', background: 'var(--card-bg)', border: '1px solid var(--border-color)', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', transition: 'transform 0.15s, box-shadow 0.15s' }}
                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.12)'; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; }}>
-                {/* Card Top Gradient */}
-                <div style={{ height: '6px', background: 'linear-gradient(90deg, #3b82f6, #10b981)' }} />
+                <div style={{ height: '6px', background: canAfford || existing ? 'linear-gradient(90deg, #3b82f6, #10b981)' : 'linear-gradient(90deg, #ef4444, #f59e0b)' }} />
                 <div style={{ padding: '1.4rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.8rem' }}>
                     <div>
@@ -132,22 +153,26 @@ export default function CourseEnroll() {
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', gap: '1rem', fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1.2rem' }}>
-                    <span>⏱ {course.duration_weeks} weeks</span>
-                    <span style={{ fontWeight: 700, color: '#10b981' }}>₹{parseFloat(course.fee_amount || 0).toLocaleString('en-IN')}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>⏱ {course.duration_weeks} weeks</span>
+                    <span style={{ fontWeight: 800, fontSize: '1rem', color: canAfford || existing ? '#f59e0b' : '#ef4444', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      🪙 {coinsRequired.toLocaleString()}
+                      {!existing && !canAfford && <span style={{ fontSize: '0.7rem', color: '#ef4444' }}>⚠ Low</span>}
+                    </span>
                   </div>
 
                   {existing ? (
                     <div style={{ padding: '0.6rem 1rem', borderRadius: '10px', background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: '0.85rem', textAlign: 'center' }}>
                       {cfg.icon} {cfg.label === 'Approved' ? 'Enrolled ✓' : `Request ${cfg.label}`}
                       {existing.batch_name && <div style={{ fontSize: '0.78rem', fontWeight: 400, marginTop: '0.2rem' }}>Batch: {existing.batch_name}</div>}
+                      {existing.coins_deducted > 0 && <div style={{ fontSize: '0.75rem', fontWeight: 600, marginTop: '0.2rem' }}>🪙 {existing.coins_deducted.toLocaleString()} coins deducted</div>}
                     </div>
                   ) : (
                     <button
                       onClick={() => setShowModal(course)}
                       disabled={submitting === course.id}
-                      style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #3b82f6, #10b981)', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem', transition: 'opacity 0.2s' }}>
-                      {submitting === course.id ? 'Submitting...' : '📩 Request Enrollment'}
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: 'none', background: canAfford ? 'linear-gradient(135deg, #3b82f6, #10b981)' : 'linear-gradient(135deg, #94a3b8, #64748b)', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem', transition: 'opacity 0.2s' }}>
+                      {submitting === course.id ? 'Submitting...' : canAfford ? '📩 Request Enrollment' : '🪙 Insufficient Coins'}
                     </button>
                   )}
                 </div>
@@ -169,22 +194,37 @@ export default function CourseEnroll() {
               </div>
             </div>
 
-            <div style={{ padding: '0.9rem 1rem', borderRadius: '12px', background: 'var(--bg-secondary, #f8fafc)', border: '1px solid var(--border-color)', marginBottom: '1.2rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              <div style={{ display: 'flex', gap: '1.5rem' }}>
-                <span>⏱ <strong>{showModal.duration_weeks} weeks</strong></span>
-                <span>💰 <strong style={{ color: '#10b981' }}>₹{parseFloat(showModal.fee_amount || 0).toLocaleString('en-IN')}</strong></span>
+            {/* Coin deduction info */}
+            <div style={{ padding: '1rem 1.2rem', borderRadius: '14px', background: 'linear-gradient(135deg, #7c3aed10, #f59e0b10)', border: '1px solid #f59e0b30', marginBottom: '1.2rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.2rem' }}>COINS REQUIRED</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#f59e0b' }}>🪙 {Math.round(parseFloat(showModal.fee_amount || 0)).toLocaleString()}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.2rem' }}>YOUR BALANCE</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: coinBalance >= Math.round(parseFloat(showModal.fee_amount || 0)) ? '#10b981' : '#ef4444' }}>
+                    🪙 {coinBalance.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+              <div style={{ marginTop: '0.8rem', height: '6px', borderRadius: '999px', background: 'var(--border-color)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${Math.min(100, (coinBalance / Math.max(1, Math.round(parseFloat(showModal.fee_amount || 0)))) * 100)}%`, background: coinBalance >= Math.round(parseFloat(showModal.fee_amount || 0)) ? 'linear-gradient(90deg, #10b981, #3b82f6)' : '#ef4444', borderRadius: '999px' }} />
+              </div>
+              <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                ⏱ {showModal.duration_weeks} weeks course &nbsp;·&nbsp; Coins deducted only on admin approval
               </div>
             </div>
 
             <form onSubmit={handleEnrollSubmit}>
               <div style={{ marginBottom: '1.2rem' }}>
                 <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>Why do you want to join this course? <span style={{ color: '#94a3b8' }}>(optional)</span></label>
-                <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder='e.g. I want to build my career in web development...' rows={4}
+                <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder='e.g. I want to build my career in web development...' rows={3}
                   style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--card-bg)', color: 'var(--text-primary)', resize: 'vertical', boxSizing: 'border-box', fontSize: '0.9rem' }} />
               </div>
 
               <div style={{ padding: '0.75rem', borderRadius: '10px', background: '#fef3c7', border: '1px solid #fcd34d', marginBottom: '1.2rem', fontSize: '0.82rem', color: '#92400e' }}>
-                ⏳ <strong>Note:</strong> Your request will be sent to the admin for review. You'll receive an email notification once it's approved or rejected.
+                ⏳ Your request will be reviewed by admin. <strong>No coins deducted yet</strong> — coins are only deducted when your enrollment is approved.
               </div>
 
               <div style={{ display: 'flex', gap: '1rem' }}>

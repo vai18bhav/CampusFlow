@@ -22,6 +22,9 @@ const Sidebar = ({ isOpen, onClose }) => {
           <NavLink to="/enroll" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
             <div className="cf-nav-item-content"><i className="bi bi-journal-plus"></i><span>Enroll in Course</span></div>
           </NavLink>
+          <NavLink to="/wallet" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
+            <div className="cf-nav-item-content"><i className="bi bi-coin"></i><span>🪙 My Coin Wallet</span></div>
+          </NavLink>
           <NavLink to="/notices" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
             <div className="cf-nav-item-content"><i className="bi bi-megaphone"></i><span>Notice Board</span></div>
           </NavLink>

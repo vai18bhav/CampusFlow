@@ -24,6 +24,7 @@ const timetableRoutes = require('./routes/timetableRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const placementRoutes = require('./routes/placementRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
+const enrollmentRoutes = require('./routes/enrollmentRoutes');
 
 const app = express();
 
@@ -77,6 +78,7 @@ app.use('/api/timetable', timetableRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/placements', placementRoutes);
 app.use('/api/certificates', certificateRoutes);
+app.use('/api/enrollments', enrollmentRoutes);
 
 // Error Handling Middleware
 app.use(notFoundHandler);

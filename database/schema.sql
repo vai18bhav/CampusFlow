@@ -499,3 +499,25 @@ CREATE TABLE certificates (
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
     FOREIGN KEY (issued_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 27. ENROLLMENT REQUESTS TABLE
+-- Students request to enroll in a course; admin approves/rejects and assigns a batch
+DROP TABLE IF EXISTS enrollment_requests;
+CREATE TABLE enrollment_requests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    course_id INT NOT NULL,
+    batch_id INT,                          -- filled by admin on approval
+    message TEXT,                          -- student's note / reason
+    status ENUM('PENDING','APPROVED','REJECTED') DEFAULT 'PENDING',
+    admin_remarks TEXT,                    -- admin's note on decision
+    reviewed_by INT,
+    reviewed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE SET NULL,
+    FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+

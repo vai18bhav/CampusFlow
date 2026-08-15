@@ -19,6 +19,9 @@ const Sidebar = ({ isOpen, onClose }) => {
           <NavLink to="/dashboard" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
             <div className="cf-nav-item-content"><i className="bi bi-grid-1x2"></i><span>My Dashboard</span></div>
           </NavLink>
+          <NavLink to="/enroll" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
+            <div className="cf-nav-item-content"><i className="bi bi-journal-plus"></i><span>Enroll in Course</span></div>
+          </NavLink>
           <NavLink to="/notices" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
             <div className="cf-nav-item-content"><i className="bi bi-megaphone"></i><span>Notice Board</span></div>
           </NavLink>
@@ -144,6 +147,9 @@ const Sidebar = ({ isOpen, onClose }) => {
         <div className="cf-sidebar-section-title">ADMISSIONS & FINANCE</div>
         <NavLink to="/leads" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
           <div className="cf-nav-item-content"><i className="bi bi-funnel"></i><span>Leads</span></div>
+        </NavLink>
+        <NavLink to="/enrollment-requests" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
+          <div className="cf-nav-item-content"><i className="bi bi-journal-check"></i><span>Enrollment Requests</span></div>
         </NavLink>
         <NavLink to="/admissions" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
           <div className="cf-nav-item-content"><i className="bi bi-file-earmark-check"></i><span>Admissions</span></div>

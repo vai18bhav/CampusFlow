@@ -221,10 +221,61 @@ const sendBroadcastNoticeEmail = async ({ toEmail, recipientName, noticeTitle, p
   }
 };
 
+/**
+ * Send enrollment request decision email to student
+ */
+const sendEnrollmentDecisionEmail = async ({ toEmail, studentName, courseName, batchName, status, adminRemarks }) => {
+  const isApproved = status === 'APPROVED';
+  const transporter = createTransporter();
+  const mailOptions = {
+    from: `"CampusFlow Admissions" <${process.env.EMAIL_USER || 'campusflow18@gmail.com'}>`,
+    to: toEmail,
+    subject: isApproved
+      ? `✅ Enrollment Approved — ${courseName} | CampusFlow`
+      : `❌ Enrollment Update — ${courseName} | CampusFlow`,
+    html: `
+      <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 0; border-radius: 16px; overflow: hidden;">
+        <div style="background: linear-gradient(135deg, ${isApproved ? '#10b981, #3b82f6' : '#ef4444, #f59e0b'}); padding: 2.5rem; text-align: center;">
+          <div style="font-size: 3rem;">${isApproved ? '🎉' : '📋'}</div>
+          <h1 style="color: white; margin: 0.5rem 0; font-size: 1.5rem;">Enrollment ${isApproved ? 'Approved!' : 'Status Update'}</h1>
+          <p style="color: rgba(255,255,255,0.85); margin: 0;">CampusFlow Training Institute</p>
+        </div>
+        <div style="padding: 2rem; background: white;">
+          <p style="color: #374151; font-size: 1rem;">Dear <strong>${studentName}</strong>,</p>
+          ${isApproved
+            ? `<p style="color: #374151;">Great news! Your enrollment request has been <strong style="color: #10b981;">approved</strong>. You are now enrolled in:</p>`
+            : `<p style="color: #374151;">We have reviewed your enrollment request. Unfortunately, your request for <strong>${courseName}</strong> has been <strong style="color: #ef4444;">not approved</strong> at this time.</p>`
+          }
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
+            <div style="margin-bottom: 0.5rem;"><strong>📚 Course:</strong> ${courseName}</div>
+            ${batchName ? `<div style="margin-bottom: 0.5rem;"><strong>🏫 Batch:</strong> ${batchName}</div>` : ''}
+            ${adminRemarks ? `<div><strong>📝 Remarks:</strong> ${adminRemarks}</div>` : ''}
+          </div>
+          ${isApproved
+            ? `<p style="color: #374151;">Please log in to your CampusFlow portal to access your course materials, attendance, and assignments.</p>`
+            : `<p style="color: #374151;">You may contact your counselor or apply again for a future batch. We look forward to supporting your learning journey.</p>`
+          }
+          <div style="text-align: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 0.85rem;">
+            <strong>CampusFlow</strong> — Training & Admissions Management Platform
+          </div>
+        </div>
+      </div>
+    `
+  };
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✓ Enrollment decision email dispatched to: ${toEmail}`);
+  } catch (error) {
+    console.error('Failed to send enrollment decision email:', error.message);
+  }
+};
+
 module.exports = {
   sendStudentWelcomeEmail,
   sendAssignmentEmail,
   sendPaymentReceiptEmail,
   sendMockInterviewEmail,
-  sendBroadcastNoticeEmail
+  sendBroadcastNoticeEmail,
+  sendEnrollmentDecisionEmail
 };
+

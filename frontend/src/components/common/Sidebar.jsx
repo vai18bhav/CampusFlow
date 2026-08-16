@@ -182,6 +182,9 @@ const Sidebar = ({ isOpen, onClose }) => {
         <NavLink to="/certificates" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
           <div className="cf-nav-item-content"><i className="bi bi-award"></i><span>Certificates</span></div>
         </NavLink>
+        <NavLink to="/wallet-admin" onClick={onClose} className={({ isActive }) => `cf-nav-item ${isActive ? 'active' : ''}`}>
+          <div className="cf-nav-item-content"><i className="bi bi-coin"></i><span>🪙 Coin Wallets</span></div>
+        </NavLink>
       </>
     );
   };

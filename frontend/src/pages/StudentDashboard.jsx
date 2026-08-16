@@ -12,9 +12,12 @@ const StudentDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [wallet, setWallet] = useState(null);
 
   useEffect(() => {
     fetchStudentDashboard();
+    // Fetch coin wallet
+    api.get('/wallet/my').then(r => setWallet(r.data?.wallet)).catch(() => {});
   }, []);
 
   const fetchStudentDashboard = async () => {
@@ -78,8 +81,8 @@ const StudentDashboard = () => {
           <button className="btn btn-outline-light rounded-pill fw-semibold px-3" onClick={() => navigate('/assignments')}>
             <i className="bi bi-file-earmark-code me-1"></i> My Assignments
           </button>
-          <button className="btn btn-warning text-dark rounded-pill fw-bold px-3 shadow" onClick={() => navigate('/finance')}>
-            <i className="bi bi-credit-card me-1"></i> My Fee Ledger
+          <button className="btn btn-warning text-dark rounded-pill fw-bold px-3 shadow" onClick={() => navigate('/enroll')}>
+            <i className="bi bi-journal-plus me-1"></i> Enroll Course
           </button>
         </div>
       </div>
@@ -124,6 +127,34 @@ const StudentDashboard = () => {
             color="info"
             subtitle={interviews?.upcoming ? `Topic: ${interviews.upcoming.topic}` : 'No scheduled sessions'}
           />
+        </div>
+      </div>
+
+      {/* 🪙 Coin Wallet Banner */}
+      <div onClick={() => navigate('/wallet')} style={{ cursor: 'pointer', borderRadius: '16px', background: 'linear-gradient(135deg, #7c3aed, #f59e0b)', padding: '1.2rem 1.8rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 8px 30px rgba(124,58,237,0.3)', flexWrap: 'wrap', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <span style={{ fontSize: '2.5rem' }}>🪙</span>
+          <div>
+            <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08rem' }}>My Coin Wallet</div>
+            <div style={{ color: '#fff', fontSize: '2rem', fontWeight: 900, lineHeight: 1 }}>
+              {(wallet?.coins_balance ?? 10000).toLocaleString('en-IN')}
+              <span style={{ fontSize: '1rem', marginLeft: '0.3rem', opacity: 0.8 }}>🪙</span>
+            </div>
+            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem' }}>≈ ₹{(wallet?.coins_balance ?? 10000).toLocaleString('en-IN')} · 1 coin = ₹1</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+          <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.15)', borderRadius: '10px', padding: '0.5rem 1rem' }}>
+            <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>{(wallet?.total_earned ?? 10000).toLocaleString()}</div>
+            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.72rem' }}>Total Earned</div>
+          </div>
+          <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.15)', borderRadius: '10px', padding: '0.5rem 1rem' }}>
+            <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>{(wallet?.total_spent ?? 0).toLocaleString()}</div>
+            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.72rem' }}>Total Spent</div>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '999px', padding: '0.5rem 1.2rem', color: '#fff', fontWeight: 700, fontSize: '0.85rem' }}>
+            View Wallet →
+          </div>
         </div>
       </div>
 

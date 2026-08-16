@@ -30,6 +30,7 @@ import Certificates from '../pages/Certificates';
 import CourseEnroll from '../pages/CourseEnroll';
 import EnrollmentRequests from '../pages/EnrollmentRequests';
 import Wallet from '../pages/Wallet';
+import WalletAdmin from '../pages/WalletAdmin';
 import NotFound from '../pages/NotFound';
 
 const ProtectedRoute = ({ children }) => {
@@ -88,6 +89,7 @@ const AppRoutes = () => {
         <Route path="/enroll" element={<CourseEnroll />} />
         <Route path="/enrollment-requests" element={<EnrollmentRequests />} />
         <Route path="/wallet" element={<Wallet />} />
+        <Route path="/wallet-admin" element={<WalletAdmin />} />
         <Route path="/settings" element={<MyProfile />} />
       </Route>
 

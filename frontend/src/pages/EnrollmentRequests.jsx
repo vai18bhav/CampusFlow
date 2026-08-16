@@ -52,12 +52,17 @@ export default function EnrollmentRequests() {
     setSubmitting(true);
     try {
       const r = await api.patch(`/enrollments/${approveModal.id}/approve`, approveForm);
-      showToast(r.message || 'Enrollment approved! Student enrolled and email sent.');
+      showToast(`✅ ${r.message || 'Enrollment approved! Student enrolled and email sent.'}`);
       setApproveModal(null);
       fetchRequests();
-    } catch (err) { showToast(err || 'Failed to approve', 'error'); }
+    } catch (err) {
+      // Surface the specific error (e.g. insufficient coins)
+      const msg = typeof err === 'string' ? err : err?.message || 'Failed to approve enrollment';
+      showToast(`❌ ${msg}`, 'error');
+    }
     setSubmitting(false);
   };
+
 
   const handleReject = async (e) => {
     e.preventDefault();

@@ -79,7 +79,14 @@ const getInvoices = async (req, res) => {
     const today = new Date().toISOString().split('T')[0];
 
     for (let inv of invoices) {
-      if (inv.due_date && inv.due_date.split('T')[0] < today && parseFloat(inv.due_amount) > 0 && inv.status !== 'CANCELLED') {
+      let dueDateStr = '';
+      if (inv.due_date instanceof Date) {
+        dueDateStr = inv.due_date.toISOString().split('T')[0];
+      } else if (inv.due_date) {
+        dueDateStr = String(inv.due_date).split('T')[0];
+      }
+
+      if (dueDateStr && dueDateStr < today && parseFloat(inv.due_amount || 0) > 0 && inv.status !== 'CANCELLED') {
         inv.status = 'OVERDUE';
       }
 

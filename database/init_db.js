@@ -9,27 +9,39 @@ const dotenv = require(path.join(backendPath, 'node_modules/dotenv'));
 
 dotenv.config({ path: path.join(backendPath, '.env') });
 
+const dbHost = process.env.DB_HOST || 'localhost';
 const dbPort = parseInt(process.env.DB_PORT || '3307', 10);
+const dbUser = process.env.DB_USER || 'root';
+const dbPassword = process.env.DB_PASSWORD || '';
+const isRemoteHost = dbHost !== 'localhost' && dbHost !== '127.0.0.1';
+const useSSL = process.env.DB_SSL === 'true' || isRemoteHost;
 
 async function initDatabase() {
-  console.log(`Starting CampusFlow Database Initialization on PORT ${dbPort}...`);
+  console.log(`Starting CampusFlow Database Initialization on ${dbHost}:${dbPort}...`);
 
   let connection;
   try {
-    connection = await mysql.createConnection({
-      host: process.env.DB_HOST || 'localhost',
+    const connConfig = {
+      host: dbHost,
       port: dbPort,
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || '',
-      multipleStatements: true
-    });
+      user: dbUser,
+      password: dbPassword,
+      multipleStatements: true,
+      connectTimeout: 20000
+    };
 
-    console.log(`Connected to MySQL Server on Port ${dbPort}. Executing schema.sql...`);
+    if (useSSL) {
+      connConfig.ssl = { rejectUnauthorized: false };
+    }
+
+    connection = await mysql.createConnection(connConfig);
+
+    console.log(`Connected to MySQL Server on ${dbHost}:${dbPort}. Executing schema.sql...`);
 
     const schemaPath = path.join(__dirname, 'schema.sql');
     const schemaSql = fs.readFileSync(schemaPath, 'utf8');
     await connection.query(schemaSql);
-    console.log('Schema executed successfully. Database `campusflow_db` and 21 tables created.');
+    console.log('Schema executed successfully. Database `campusflow_db` and all tables created.');
 
     const defaultPassword = 'password123';
     const salt = await bcrypt.genSalt(10);
@@ -47,7 +59,7 @@ async function initDatabase() {
 ==================================================
 CAMPUSFLOW DATABASE INITIALIZATION COMPLETE!
 ==================================================
-MySQL Port: 3307
+Host: ${dbHost}:${dbPort}
 Database: campusflow_db
 Default Accounts (Password for all: password123):
 - Super Admin: superadmin@campusflow.com
@@ -59,7 +71,7 @@ Default Accounts (Password for all: password123):
 ==================================================
     `);
   } catch (error) {
-    console.error(`Database initialization failed on Port ${dbPort}:`, error);
+    console.error(`Database initialization failed on ${dbHost}:${dbPort}:`, error);
     process.exit(1);
   } finally {
     if (connection) await connection.end();

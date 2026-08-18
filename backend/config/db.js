@@ -3,34 +3,50 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
+const dbHost = process.env.DB_HOST || 'localhost';
 const dbPort = parseInt(process.env.DB_PORT || '3307', 10);
+const dbUser = process.env.DB_USER || 'root';
+const dbPassword = process.env.DB_PASSWORD || 'Pass@123';
+const dbName = process.env.DB_NAME || 'campusflow_db';
 
-if (dbPort !== 3307) {
-  console.error(`[CRITICAL CONFIGURATION ERROR] MySQL Port is set to ${dbPort}. CampusFlow STRICTLY requires PORT 3307.`);
-  process.exit(1);
-}
+// Support SSL connection for Cloud MySQL (Aiven, TiDB, Clever Cloud, Railway, AWS RDS, etc.)
+const isRemoteHost = dbHost !== 'localhost' && dbHost !== '127.0.0.1';
+const useSSL = process.env.DB_SSL === 'true' || (process.env.NODE_ENV === 'production' && isRemoteHost);
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
+const poolConfig = {
+  host: dbHost,
   port: dbPort,
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'Pass@123',
-  database: process.env.DB_NAME || 'campusflow_db',
+  user: dbUser,
+  password: dbPassword,
+  database: dbName,
   waitForConnections: true,
   connectionLimit: 15,
   queueLimit: 0,
-  multipleStatements: true
-});
+  multipleStatements: true,
+  connectTimeout: 20000 // 20s timeout for remote cloud hosts
+};
 
-// Test connection
+if (useSSL) {
+  poolConfig.ssl = {
+    rejectUnauthorized: false
+  };
+}
+
+const pool = mysql.createPool(poolConfig);
+
+// Test database connection on startup
 (async () => {
   try {
     const connection = await pool.getConnection();
-    console.log(`[DATABASE CONNECTED] Successfully connected to MySQL server on host '${process.env.DB_HOST || 'localhost'}', port ${dbPort}, database '${process.env.DB_NAME || 'campusflow_db'}'.`);
+    console.log(`[DATABASE CONNECTED] Successfully connected to MySQL server on host '${dbHost}:${dbPort}', database '${dbName}' (SSL: ${useSSL ? 'Enabled' : 'Disabled'}).`);
     connection.release();
   } catch (error) {
-    console.error(`[DATABASE CONNECTION ERROR] Failed to connect to MySQL on PORT ${dbPort}:`, error.message);
-    console.error(`Verify MySQL service is active on PORT 3307 and database '${process.env.DB_NAME || 'campusflow_db'}' exists.`);
+    console.error(`[DATABASE CONNECTION ERROR] Failed to connect to MySQL on '${dbHost}:${dbPort}':`, error.message);
+    if (dbHost === 'localhost' || dbHost === '127.0.0.1') {
+      console.error(`💡 If running locally, ensure MySQL is running on PORT ${dbPort}. If deploying on Render/Cloud, set DB_HOST, DB_PORT, DB_USER, DB_PASSWORD environment variables in Render dashboard.`);
+    } else {
+      console.error(`💡 Remote connection failed. Verify your Cloud MySQL host, port, credentials, and IP whitelist.`);
+    }
   }
 })();
 

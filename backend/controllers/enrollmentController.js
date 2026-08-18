@@ -143,13 +143,21 @@ const approveEnrollment = async (req, res) => {
     );
     const admissionId = admResult.insertId;
 
-    // 4. Create Fee / Invoice record (paid via coins)
+    // 4. Create Invoice & Payment record (paid in full via coins)
     const invoiceNo = `INV-${Date.now()}`;
-    await conn.query(
-      `INSERT INTO fee_invoices (invoice_number, admission_id, student_id, amount, paid_amount, payment_method, status, payment_date, notes, created_by)
-       VALUES (?, ?, ?, ?, ?, 'COINS', 'PAID', CURDATE(), ?, ?)`,
-      [invoiceNo, admissionId, reqData.student_id, coinsRequired, coinsRequired, `Fee paid via ${coinsRequired} coins. Remaining balance: ${newBalance} 🪙`, req.user.id]
+    const [invResult] = await conn.query(
+      `INSERT INTO invoices (admission_id, student_id, course_id, invoice_number, total_amount, net_amount, paid_amount, due_amount, invoice_date, due_date, status, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 0.00, CURDATE(), CURDATE(), 'PAID', ?)`,
+      [admissionId, reqData.student_id, reqData.course_id, invoiceNo, coinsRequired, coinsRequired, coinsRequired, req.user.id]
     );
+
+    if (coinsRequired > 0) {
+      await conn.query(
+        `INSERT INTO payments (invoice_id, student_id, amount, payment_date, payment_method, transaction_reference, remarks, received_by)
+         VALUES (?, ?, ?, CURDATE(), 'ONLINE', ?, ?, ?)`,
+        [invResult.insertId, reqData.student_id, coinsRequired, `COINS-ENROLL-${id}`, `Paid in full via ${coinsRequired} Coins. Remaining balance: ${newBalance} 🪙`, req.user.id]
+      );
+    }
 
     // 5. In-app notification to student
     await conn.query(

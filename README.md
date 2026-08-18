@@ -114,7 +114,11 @@ FRONTEND_URL=http://localhost:5173
 
 ### 2. Frontend Configuration (`frontend/.env`)
 ```env
-VITE_API_URL=http://localhost:5000/api
+# For local development — leave blank (Vite proxy handles it automatically)
+# VITE_API_URL=
+
+# For production (Railway backend URL):
+# VITE_API_URL=https://your-backend.up.railway.app/api
 ```
 
 ---

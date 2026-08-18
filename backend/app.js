@@ -93,6 +93,8 @@ app.use(['/api/placements', '/placements'], placementRoutes);
 app.use(['/api/certificates', '/certificates'], certificateRoutes);
 app.use(['/api/enrollments', '/enrollments'], enrollmentRoutes);
 app.use(['/api/wallet', '/wallet'], walletRoutes);
+const aiRoutes = require('./routes/aiRoutes');
+app.use(['/api/ai', '/ai'], aiRoutes);
 
 // Error Handling Middleware
 app.use(notFoundHandler);

@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const { successResponse, errorResponse } = require('../utils/responseHelper');
+const { sendBatchScheduleUpdateEmail } = require('../utils/emailService');
 
 /**
  * GET /api/batches
@@ -279,6 +280,39 @@ const updateBatch = async (req, res) => {
        WHERE id = ?`,
       [course_id, trainer_id || null, name, start_date, end_date || null, timing, start_time, end_time, room_number, mode, max_students, description, status, id]
     );
+
+    // If timing or schedule changed, notify all enrolled students
+    if (current.timing !== timing || current.start_time !== start_time || current.end_time !== end_time || current.room_number !== room_number) {
+      const [students] = await pool.query(
+        `SELECT u.id as user_id, u.full_name, u.email 
+         FROM batch_students bs
+         JOIN students s ON bs.student_id = s.id
+         JOIN users u ON s.user_id = u.id
+         WHERE bs.batch_id = ? AND bs.status = 'ENROLLED'`,
+        [id]
+      );
+
+      const timingText = timing || (start_time && end_time ? `${start_time} - ${end_time}` : 'Updated Schedule');
+      const notifyTitle = `⏰ Batch Schedule Changed: ${name}`;
+      const notifyMsg = `Your batch timing has been updated to: ${timingText} (Room/Link: ${room_number || 'Main Lab'}).`;
+
+      for (const stu of students) {
+        await pool.query(
+          "INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, 'TIMETABLE')",
+          [stu.user_id, notifyTitle, notifyMsg]
+        ).catch(() => {});
+
+        sendBatchScheduleUpdateEmail({
+          toEmail: stu.email,
+          studentName: stu.full_name,
+          batchName: name,
+          timing: timingText,
+          roomNumber: room_number,
+          notes: description,
+          updatedBy: req.user.full_name
+        }).catch(() => {});
+      }
+    }
 
     return successResponse(res, 200, 'Batch updated successfully');
   } catch (error) {

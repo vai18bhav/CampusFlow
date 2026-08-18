@@ -270,12 +270,63 @@ const sendEnrollmentDecisionEmail = async ({ toEmail, studentName, courseName, b
   }
 };
 
+/**
+ * Send Batch Schedule / Timing Update Notification Email
+ */
+const sendBatchScheduleUpdateEmail = async ({ toEmail, studentName, batchName, dayOfWeek, subject, timing, roomNumber, notes, updatedBy }) => {
+  const mailOptions = {
+    from: `"CampusFlow Academic Timetable" <${process.env.EMAIL_USER || 'campusflow18@gmail.com'}>`,
+    to: toEmail,
+    subject: `⏰ Batch Schedule Updated: ${batchName} (${dayOfWeek || 'Weekly Timing'})`,
+    html: `
+      <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
+        <div style="background: linear-gradient(135deg, #f97316, #f59e0b); padding: 2rem; text-align: center; color: white;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🗓️</div>
+          <h2 style="margin: 0; font-size: 1.4rem; font-weight: 800;">Timetable Schedule Update</h2>
+          <p style="margin: 0.3rem 0 0; opacity: 0.9; font-size: 0.9rem;">${batchName}</p>
+        </div>
+        <div style="padding: 2rem; background: white;">
+          <p style="color: #334155; font-size: 1rem;">Hello <strong>${studentName}</strong>,</p>
+          <p style="color: #475569; line-height: 1.6;">
+            Your batch schedule has been updated by <strong>${updatedBy || 'Faculty / Admin'}</strong>. Please take note of the new session timing below:
+          </p>
+          
+          <div style="background: #fff7ed; border-left: 4px solid #f97316; border-radius: 8px; padding: 1.25rem; margin: 1.5rem 0;">
+            <div style="margin-bottom: 0.5rem; color: #1e293b;"><strong>🏫 Batch:</strong> ${batchName}</div>
+            ${dayOfWeek ? `<div style="margin-bottom: 0.5rem; color: #1e293b;"><strong>📅 Day:</strong> ${dayOfWeek}</div>` : ''}
+            ${subject ? `<div style="margin-bottom: 0.5rem; color: #1e293b;"><strong>📖 Subject:</strong> ${subject}</div>` : ''}
+            <div style="margin-bottom: 0.5rem; color: #1e293b;"><strong>⏰ New Timing:</strong> <span style="color: #ea580c; font-weight: 700;">${timing}</span></div>
+            ${roomNumber ? `<div style="margin-bottom: 0.5rem; color: #1e293b;"><strong>📍 Room / Link:</strong> ${roomNumber}</div>` : ''}
+            ${notes ? `<div style="color: #64748b; font-size: 0.88rem;"><strong>📝 Notes:</strong> ${notes}</div>` : ''}
+          </div>
+
+          <p style="color: #475569; font-size: 0.9rem;">
+            Please join your classes according to this revised schedule. You can always view your live timetable on the CampusFlow portal.
+          </p>
+          
+          <div style="text-align: center; margin-top: 1.8rem; padding-top: 1.2rem; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 0.8rem;">
+            © 2026 CampusFlow Training Institute. Automated Timetable Alert.
+          </div>
+        </div>
+      </div>
+    `
+  };
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✓ Batch schedule update email dispatched to: ${toEmail}`);
+  } catch (error) {
+    console.error('Failed to send schedule update email:', error.message);
+  }
+};
+
 module.exports = {
   sendStudentWelcomeEmail,
   sendAssignmentEmail,
   sendPaymentReceiptEmail,
   sendMockInterviewEmail,
   sendBroadcastNoticeEmail,
-  sendEnrollmentDecisionEmail
+  sendEnrollmentDecisionEmail,
+  sendBatchScheduleUpdateEmail
 };
+
 

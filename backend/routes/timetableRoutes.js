@@ -9,6 +9,6 @@ router.use(authenticateJWT);
 router.get('/', getTimetable);
 router.post('/', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'TRAINER'), addSlot);
 router.put('/:id', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'TRAINER'), updateSlot);
-router.delete('/:id', authorizeRoles('SUPER_ADMIN', 'ADMIN'), deleteSlot);
+router.delete('/:id', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'TRAINER'), deleteSlot);
 
 module.exports = router;

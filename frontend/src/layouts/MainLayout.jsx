@@ -29,13 +29,13 @@ const MainLayout = () => {
         <main className="p-3 p-md-4 flex-grow-1">
           <Outlet />
         </main>
-        <footer className="py-3 px-4 border-top text-muted small bg-white d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
+        <footer className="cf-footer py-3 px-4 border-top small d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
           <div>
-            &copy; {new Date().getFullYear()} <strong className="text-dark">CampusFlow</strong> – Enterprise Training & Admission Management Portal.
+            &copy; {new Date().getFullYear()} <strong>CampusFlow</strong> – Enterprise Training & Admission Management Portal.
           </div>
-          <div className="d-flex gap-3 text-muted">
-            <span className="badge bg-success bg-opacity-10 text-success border px-2.5 py-1">v1.0.0 Stable</span>
-            <span>Security Encrypted (256-bit JWT)</span>
+          <div className="d-flex gap-3 align-items-center">
+            <span className="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 px-2.5 py-1">v1.0.0 Stable</span>
+            <span style={{ opacity: 0.75 }}>Security Encrypted (256-bit JWT)</span>
           </div>
         </footer>
       </div>

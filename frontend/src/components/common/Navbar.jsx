@@ -10,16 +10,22 @@ const Navbar = ({ onToggleSidebar }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem('cf_theme') === 'dark';
+  });
 
   useEffect(() => {
     fetchNotifications();
+    const savedTheme = localStorage.getItem('cf_theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
   }, []);
 
   const toggleDarkMode = () => {
     const nextMode = !darkMode;
     setDarkMode(nextMode);
-    document.documentElement.setAttribute('data-theme', nextMode ? 'dark' : 'light');
+    const themeStr = nextMode ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', themeStr);
+    localStorage.setItem('cf_theme', themeStr);
   };
 
   const fetchNotifications = async () => {

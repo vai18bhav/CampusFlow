@@ -193,14 +193,15 @@ const Sidebar = ({ isOpen, onClose }) => {
     <aside className={`cf-sidebar ${isOpen ? 'mobile-open' : ''}`}>
       {/* Brand Header */}
       <div className="cf-sidebar-brand d-flex justify-content-between align-items-center">
-        <div className="d-flex align-items-center gap-2">
-          <div className="brand-badge-cf">CF</div>
+        <div className="d-flex align-items-center gap-2.5">
+          <img src="/logo.png" alt="CampusFlow" className="brand-logo-img" onError={(e) => { e.target.style.display = 'none'; }} />
+          <div className="brand-badge-cf" style={{ display: 'none' }}>CF</div>
           <div>
             <div className="brand-title">CampusFlow</div>
             <div className="brand-subtitle">Training & Admissions</div>
           </div>
         </div>
-        <button className="btn btn-sm btn-link text-white-50 d-lg-none p-0" onClick={onClose}>
+        <button className="btn btn-sm btn-link p-0 d-lg-none" style={{ color: 'var(--cf-text-muted)' }} onClick={onClose}>
           <i className="bi bi-x-lg fs-5"></i>
         </button>
       </div>
@@ -210,11 +211,11 @@ const Sidebar = ({ isOpen, onClose }) => {
       </nav>
 
       {/* Sidebar Footer */}
-      <div className="p-3 border-top border-secondary border-opacity-25 mt-auto">
+      <div className="p-3 border-top mt-auto" style={{ borderColor: 'var(--cf-sidebar-border)' }}>
         <div className="d-flex align-items-center justify-content-between">
           <div className="text-truncate me-2" style={{ maxWidth: '160px' }}>
-            <div className="fw-semibold text-white small text-truncate">{user?.full_name}</div>
-            <div className="text-white-50" style={{ fontSize: '0.725rem' }}>{role?.replace('_', ' ')}</div>
+            <div className="fw-bold small text-truncate" style={{ color: 'var(--cf-text-main)' }}>{user?.full_name}</div>
+            <div style={{ fontSize: '0.725rem', color: 'var(--cf-sidebar-text-muted)', fontWeight: 600 }}>{role?.replace('_', ' ')}</div>
           </div>
           <button
             onClick={handleLogout}

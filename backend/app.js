@@ -58,7 +58,7 @@ app.use(express.urlencoded({ extended: true }));
 
 
 // Root health check endpoint
-app.get('/api/health', (req, res) => {
+app.get(['/health', '/api/health'], (req, res) => {
   res.status(200).json({
     success: true,
     message: 'CampusFlow Backend API is running smoothly',
@@ -69,31 +69,30 @@ app.get('/api/health', (req, res) => {
 
 const studentRoutes = require('./routes/studentRoutes');
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/students', userRoutes);
-app.use('/api/student', studentRoutes);
-app.use('/api/courses', courseRoutes);
-app.use('/api/batches', batchRoutes);
-app.use('/api/leads', leadRoutes);
-app.use('/api/admissions', admissionRoutes);
-app.use('/api/attendance', attendanceRoutes);
-app.use('/api/assignments', assignmentRoutes);
-app.use('/api/finance', financeRoutes);
-app.use('/api/invoices', financeRoutes);
-app.use('/api/payments', financeRoutes);
-app.use('/api/installments', financeRoutes);
-app.use('/api/mock-interviews', interviewRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/leads', followupRoutes);
-app.use('/api/timetable', timetableRoutes);
-app.use('/api/documents', documentRoutes);
-app.use('/api/placements', placementRoutes);
-app.use('/api/certificates', certificateRoutes);
-app.use('/api/enrollments', enrollmentRoutes);
-app.use('/api/wallet', walletRoutes);
+// API Routes (Mounted under /api and root aliases for flexibility)
+app.use(['/api/auth', '/auth'], authRoutes);
+app.use(['/api/users', '/users'], userRoutes);
+app.use(['/api/students', '/students'], userRoutes);
+app.use(['/api/student', '/student'], studentRoutes);
+app.use(['/api/courses', '/courses'], courseRoutes);
+app.use(['/api/batches', '/batches'], batchRoutes);
+app.use(['/api/leads', '/leads'], leadRoutes);
+app.use(['/api/admissions', '/admissions'], admissionRoutes);
+app.use(['/api/attendance', '/attendance'], attendanceRoutes);
+app.use(['/api/assignments', '/assignments'], assignmentRoutes);
+app.use(['/api/finance', '/finance'], financeRoutes);
+app.use(['/api/invoices', '/invoices'], financeRoutes);
+app.use(['/api/payments', '/payments'], financeRoutes);
+app.use(['/api/installments', '/installments'], financeRoutes);
+app.use(['/api/mock-interviews', '/mock-interviews'], interviewRoutes);
+app.use(['/api/notifications', '/notifications'], notificationRoutes);
+app.use(['/api/reports', '/reports'], reportRoutes);
+app.use(['/api/timetable', '/timetable'], timetableRoutes);
+app.use(['/api/documents', '/documents'], documentRoutes);
+app.use(['/api/placements', '/placements'], placementRoutes);
+app.use(['/api/certificates', '/certificates'], certificateRoutes);
+app.use(['/api/enrollments', '/enrollments'], enrollmentRoutes);
+app.use(['/api/wallet', '/wallet'], walletRoutes);
 
 // Error Handling Middleware
 app.use(notFoundHandler);

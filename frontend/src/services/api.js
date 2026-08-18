@@ -1,9 +1,18 @@
 import axios from 'axios';
 
 // When running via Vite dev server (npm run dev), use the Vite proxy '/api'
-// which proxies to http://localhost:5000. This avoids CORS issues completely.
-// In production, set VITE_API_URL to your deployed backend URL.
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+// In production, user passes VITE_API_URL. Automatically ensure '/api' is appended.
+let rawBaseUrl = (import.meta.env.VITE_API_URL || '/api').trim();
+
+// Normalize URL: remove trailing slashes
+rawBaseUrl = rawBaseUrl.replace(/\/+$/, '');
+
+// If user supplied a full domain without '/api' (e.g. https://xxx.onrender.com), auto-append '/api'
+if (rawBaseUrl.startsWith('http') && !rawBaseUrl.endsWith('/api')) {
+  rawBaseUrl = `${rawBaseUrl}/api`;
+}
+
+const API_BASE_URL = rawBaseUrl;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -31,7 +40,7 @@ api.interceptors.response.use(
   (error) => {
     if (!error.response) {
       // Network error — backend not reachable
-      return Promise.reject('Network error: Cannot connect to server. Make sure the backend is running on port 5000.');
+      return Promise.reject('Network error: Cannot connect to server. Please check your backend status and URL configuration.');
     }
     if (error.response.status === 401) {
       localStorage.removeItem('cf_token');

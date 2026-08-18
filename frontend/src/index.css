@@ -132,6 +132,24 @@ body {
   position: relative;
 }
 
+/* ── Login Page 2-Column Responsive Layout ── */
+.cf-login-left {
+  display: flex !important;
+}
+
+.cf-login-mobile-logo {
+  display: none !important;
+}
+
+@media (max-width: 991.98px) {
+  .cf-login-left {
+    display: none !important;
+  }
+  .cf-login-mobile-logo {
+    display: flex !important;
+  }
+}
+
 /* ==========================================================================
    SIDEBAR COMPONENT
    ========================================================================== */

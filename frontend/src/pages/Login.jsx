@@ -161,7 +161,6 @@ export default function Login() {
         className="cf-login-left"
         style={{
           flex: '0 0 42%',
-          display: 'none',
           flexDirection: 'column',
           justifyContent: 'center',
           padding: '3.5rem',

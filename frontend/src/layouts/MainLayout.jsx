@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/common/Sidebar';
 import Navbar from '../components/common/Navbar';
-import AITutorWidget from '../components/common/AITutorWidget';
 
 const MainLayout = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -40,9 +39,6 @@ const MainLayout = () => {
           </div>
         </footer>
       </div>
-
-      {/* Floating AI Academic Tutor Widget */}
-      <AITutorWidget />
     </div>
   );
 };

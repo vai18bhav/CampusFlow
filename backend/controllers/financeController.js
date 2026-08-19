@@ -321,6 +321,41 @@ const recordPayment = async (req, res) => {
       );
     }
 
+    // 3b. If paying via Student Coin Wallet (1 Coin = ₹1)
+    if (payMethod === 'COINS') {
+      const coinsNeeded = Math.round(payAmount);
+      const [wallets] = await connection.query(
+        'SELECT * FROM student_wallet WHERE student_id = ? FOR UPDATE',
+        [invoice.student_id]
+      );
+      const curBal = wallets.length ? wallets[0].coins_balance : 0;
+      if (!wallets.length || curBal < coinsNeeded) {
+        await connection.rollback();
+        return errorResponse(
+          res,
+          400,
+          `Insufficient coins in wallet! Required: ${coinsNeeded} 🪙, Available: ${curBal} 🪙.`
+        );
+      }
+      const newBal = curBal - coinsNeeded;
+      await connection.query(
+        'UPDATE student_wallet SET coins_balance = ?, total_spent = total_spent + ? WHERE student_id = ?',
+        [newBal, coinsNeeded, invoice.student_id]
+      );
+      await connection.query(
+        `INSERT INTO coin_transactions (student_id, type, coins, balance_after, reason, reference_type, reference_id, created_by)
+         VALUES (?, 'DEBIT', ?, ?, ?, 'FEE_PAYMENT', ?, ?)`,
+        [
+          invoice.student_id,
+          coinsNeeded,
+          newBal,
+          `Tuition Installment Payment (Invoice #${invoice.invoice_number})`,
+          invoiceId,
+          req.user?.id || null
+        ]
+      );
+    }
+
     // 4. Record Payment Entry
     const [payResult] = await connection.query(
       `INSERT INTO payments 

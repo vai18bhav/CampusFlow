@@ -2,10 +2,17 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 
 const STATUS_CONFIG = {
-  PENDING:  { color: '#f59e0b', bg: '#fef3c7', icon: '⏳', label: 'Pending' },
-  APPROVED: { color: '#10b981', bg: '#d1fae5', icon: '✅', label: 'Approved' },
+  PENDING:  { color: '#f59e0b', bg: '#fef3c7', icon: '⏳', label: 'Pending Approval' },
+  APPROVED: { color: '#10b981', bg: '#d1fae5', icon: '✅', label: 'Approved & Enrolled' },
   REJECTED: { color: '#ef4444', bg: '#fee2e2', icon: '❌', label: 'Rejected' }
 };
+
+const PAYMENT_PLANS = [
+  { id: 'FULL', label: '💳 Full Payment (100% Upfront)', split: [1.0], desc: 'Deduct full course fee on approval. Zero pending balance.' },
+  { id: '2_INSTALLMENTS', label: '📦 2 Installments (50% + 50%)', split: [0.5, 0.5], desc: '50% deducted upfront on approval, 50% due in 30 days.' },
+  { id: '3_INSTALLMENTS', label: '📦 3 Installments (40% + 30% + 30%)', split: [0.4, 0.3, 0.3], desc: '40% deducted upfront, 30% in 30 days, 30% in 60 days.' },
+  { id: '4_INSTALLMENTS', label: '📦 4 Installments (25% × 4)', split: [0.25, 0.25, 0.25, 0.25], desc: '25% deducted upfront, remaining split across 3 months.' },
+];
 
 export default function CourseEnroll() {
   const [courses, setCourses] = useState([]);
@@ -16,6 +23,7 @@ export default function CourseEnroll() {
   const [toast, setToast] = useState(null);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(null);
+  const [selectedPlan, setSelectedPlan] = useState('FULL');
   const [message, setMessage] = useState('');
 
   const showToast = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 4000); };
@@ -40,17 +48,44 @@ export default function CourseEnroll() {
   const getRequestStatus = (courseId) => myRequests.find(r => r.course_id === courseId);
   const coinBalance = wallet?.coins_balance ?? 0;
 
+  const calculateMilestones = (courseFee, planId) => {
+    const fee = Math.round(parseFloat(courseFee || 0));
+    const plan = PAYMENT_PLANS.find(p => p.id === planId) || PAYMENT_PLANS[0];
+    const upfront = Math.round(fee * plan.split[0]);
+    return {
+      fee,
+      upfront,
+      installmentsCount: plan.split.length,
+      remaining: Math.max(0, fee - upfront)
+    };
+  };
+
+  const handleOpenEnrollModal = (course) => {
+    setShowModal(course);
+    setSelectedPlan('FULL');
+    setMessage('');
+  };
+
   const handleEnrollSubmit = async (e) => {
     e.preventDefault();
-    const coinsRequired = Math.round(parseFloat(showModal.fee_amount || 0));
-    if (coinsRequired > coinBalance) {
-      showToast(`❌ Insufficient coins! You need ${coinsRequired} 🪙 but have ${coinBalance} 🪙. Please contact admin.`, 'error');
+    if (!showModal) return;
+
+    const { upfront, installmentsCount } = calculateMilestones(showModal.fee_amount, selectedPlan);
+
+    if (upfront > coinBalance) {
+      showToast(`❌ Insufficient coins! You need at least ${upfront} 🪙 for the 1st installment, but you have ${coinBalance} 🪙.`, 'error');
       return;
     }
+
     setSubmitting(showModal.id);
     try {
-      await api.post('/enrollments', { course_id: showModal.id, message });
-      showToast(`✅ Enrollment request sent for "${showModal.name}"! Admin will review and deduct ${coinsRequired} 🪙 on approval.`);
+      await api.post('/enrollments', {
+        course_id: showModal.id,
+        message,
+        payment_plan: selectedPlan,
+        installments_count: installmentsCount
+      });
+      showToast(`✅ Enrollment request sent with ${installmentsCount === 1 ? 'Full Payment' : `${installmentsCount} Installments`}! Admin will review and deduct ${upfront} 🪙 upfront on approval.`);
       setShowModal(null);
       setMessage('');
       fetchData();
@@ -67,49 +102,75 @@ export default function CourseEnroll() {
   );
 
   return (
-    <div style={{ padding: '1.5rem' }}>
+    <div className="cf-page-enter" style={{ padding: '1rem 0' }}>
       {toast && (
-        <div style={{ position: 'fixed', top: '1rem', right: '1rem', padding: '0.85rem 1.4rem', borderRadius: '10px', background: toast.type === 'error' ? '#ef4444' : '#10b981', color: '#fff', fontWeight: 600, zIndex: 9999, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', maxWidth: '400px', lineHeight: 1.4 }}>
+        <div style={{ position: 'fixed', top: '1.5rem', right: '1.5rem', padding: '0.9rem 1.4rem', borderRadius: '12px', background: toast.type === 'error' ? '#ef4444' : '#10b981', color: '#fff', fontWeight: 700, zIndex: 9999, boxShadow: '0 8px 30px rgba(0,0,0,0.3)', maxWidth: '440px', lineHeight: 1.4 }}>
           {toast.msg}
         </div>
       )}
 
-      {/* Header with wallet balance */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, background: 'linear-gradient(135deg, #3b82f6, #10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            📚 Enroll in a Course
-          </h2>
-          <p style={{ margin: '0.3rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>Browse courses and submit your enrollment request. Coins are deducted on admin approval.</p>
+      {/* Header with Coin Wallet Banner */}
+      <div className="cf-hero-welcome d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div className="cf-hero-welcome-shapes">
+          <div className="cf-shape-dot cf-shape-dot-1"></div>
+          <div className="cf-shape-dot cf-shape-dot-2"></div>
         </div>
-        {/* Coin Balance Badge */}
-        <div style={{ padding: '0.8rem 1.4rem', borderRadius: '14px', background: 'linear-gradient(135deg, #7c3aed15, #f59e0b15)', border: '1.5px solid #f59e0b40', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <span style={{ fontSize: '1.5rem' }}>🪙</span>
+
+        <div className="position-relative z-1">
+          <div className="d-flex align-items-center gap-2 mb-2">
+            <span className="badge bg-warning bg-opacity-20 text-warning border border-warning border-opacity-30 px-3 py-1 rounded-pill">
+              🪙 FLEXIBLE INSTALLMENT ENROLLMENT
+            </span>
+          </div>
+          <h3 className="fw-extrabold text-white mb-1">Course Catalog & Admission Hub</h3>
+          <p className="text-white-50 mb-0" style={{ maxWidth: '600px' }}>
+            Choose your specialization, select full payment or a flexible 2/3/4 installment plan, and enroll using your CampusFlow Coin Wallet.
+          </p>
+        </div>
+
+        {/* Student Wallet Coin Balance */}
+        <div className="d-flex align-items-center gap-3 bg-white bg-opacity-10 border border-white border-opacity-20 rounded-4 px-4 py-2.5 position-relative z-1">
+          <span style={{ fontSize: '2.2rem' }}>🪙</span>
           <div>
-            <div style={{ fontWeight: 900, fontSize: '1.3rem', color: '#f59e0b', lineHeight: 1 }}>{coinBalance.toLocaleString('en-IN')}</div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>Coin Balance</div>
+            <div className="fw-extrabold text-warning fs-4 lh-1">{coinBalance.toLocaleString('en-IN')}</div>
+            <div className="text-white-50 small fw-bold mt-0.5">Available Coins</div>
           </div>
         </div>
       </div>
 
-      {/* My Requests Summary */}
+      {/* My Submitted Requests Summary Banner */}
       {myRequests.length > 0 && (
-        <div style={{ marginBottom: '1.5rem', padding: '1.2rem 1.5rem', borderRadius: '14px', background: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
-          <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.8rem', fontSize: '0.95rem' }}>📋 My Enrollment Requests</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+        <div className="cf-card mb-4 p-3.5">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h6 className="fw-bold mb-0"><i className="bi bi-clock-history me-1.5 text-primary"></i>My Recent Enrollment Requests</h6>
+            <span className="badge bg-primary bg-opacity-15 text-primary rounded-pill px-2.5">{myRequests.length} Total</span>
+          </div>
+          <div className="d-flex flex-column gap-2">
             {myRequests.map(req => {
-              const cfg = STATUS_CONFIG[req.status];
+              const st = STATUS_CONFIG[req.status] || STATUS_CONFIG.PENDING;
               return (
-                <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.7rem 1rem', borderRadius: '10px', background: cfg.bg, flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div key={req.id} className="p-2.5 rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style={{ background: 'var(--cf-input-bg, #f8fafc)', border: '1px solid var(--cf-border, #e2e8f0)' }}>
                   <div>
-                    <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{req.course_name}</div>
-                    {req.batch_name && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Batch: {req.batch_name}</div>}
-                    {req.coins_deducted > 0 && <div style={{ fontSize: '0.78rem', color: '#7c3aed', fontWeight: 600 }}>🪙 {req.coins_deducted.toLocaleString()} coins deducted</div>}
-                    {req.admin_remarks && <div style={{ fontSize: '0.78rem', color: '#6b7280', fontStyle: 'italic' }}>Admin: {req.admin_remarks}</div>}
+                    <strong style={{ color: 'var(--cf-text-main)' }}>{req.course_name}</strong>
+                    <div className="small text-muted mt-0.5">
+                      📅 Requested: {new Date(req.created_at).toLocaleDateString('en-IN')}
+                      {req.payment_plan && req.payment_plan !== 'FULL' ? (
+                        <span className="ms-2 badge bg-info bg-opacity-15 text-info border border-info border-opacity-25 px-2 py-0.5 rounded-pill">
+                          📦 {req.payment_plan.replace('_', ' ')}
+                        </span>
+                      ) : (
+                        <span className="ms-2 badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 px-2 py-0.5 rounded-pill">
+                          💳 Full Payment
+                        </span>
+                      )}
+                      {req.batch_name && <span className="ms-2 text-success fw-bold">→ Assigned to: {req.batch_name}</span>}
+                    </div>
                   </div>
-                  <span style={{ padding: '0.3rem 0.9rem', borderRadius: '999px', fontSize: '0.8rem', fontWeight: 700, background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.color}40` }}>
-                    {cfg.icon} {cfg.label}
-                  </span>
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="badge px-3 py-1.5 rounded-pill fw-bold" style={{ background: st.bg, color: st.color }}>
+                      {st.icon} {st.label}
+                    </span>
+                  </div>
                 </div>
               );
             })}
@@ -117,64 +178,88 @@ export default function CourseEnroll() {
         </div>
       )}
 
-      {/* Search */}
-      <div style={{ marginBottom: '1.2rem' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder='🔍 Search courses by name, category...'
-          style={{ width: '100%', maxWidth: '400px', padding: '0.7rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--card-bg)', color: 'var(--text-primary)', boxSizing: 'border-box' }} />
+      {/* Search Bar */}
+      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <h5 className="fw-bold mb-0">Browse All Available Courses</h5>
+        <div style={{ minWidth: '260px' }}>
+          <input
+            type="text"
+            placeholder="🔍 Search course name, code, category..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="form-control fw-semibold"
+          />
+        </div>
       </div>
 
+      {/* Courses Grid */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>Loading courses...</div>
+        <div className="cf-card text-center py-5">
+          <div className="spinner-border text-primary mb-3" role="status"></div>
+          <div className="text-muted fw-semibold">Loading available course catalog...</div>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="cf-card text-center py-5">
+          <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>📚</div>
+          <h4 className="fw-bold mb-2">No Courses Found</h4>
+          <p className="text-muted">Try adjusting your search criteria or check back later.</p>
+        </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.2rem' }}>
+        <div className="row g-4">
           {filtered.map(course => {
-            const existing = getRequestStatus(course.id);
-            const cfg = existing ? STATUS_CONFIG[existing.status] : null;
-            const coinsRequired = Math.round(parseFloat(course.fee_amount || 0));
-            const canAfford = coinBalance >= coinsRequired;
+            const req = getRequestStatus(course.id);
+            const fee = Math.round(parseFloat(course.fee_amount || 0));
+            const hasSufficientCoins = coinBalance >= fee || coinBalance >= Math.round(fee * 0.25);
 
             return (
-              <div key={course.id} style={{ borderRadius: '16px', background: 'var(--card-bg)', border: '1px solid var(--border-color)', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', transition: 'transform 0.15s, box-shadow 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.12)'; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; }}>
-                <div style={{ height: '6px', background: canAfford || existing ? 'linear-gradient(90deg, #3b82f6, #10b981)' : 'linear-gradient(90deg, #ef4444, #f59e0b)' }} />
-                <div style={{ padding: '1.4rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.8rem' }}>
+              <div key={course.id} className="col-12 col-md-6 col-xl-4">
+                <div className="cf-card h-100 p-0 overflow-hidden shadow-sm d-flex flex-column">
+                  {/* Card Header Top */}
+                  <div style={{ padding: '1.25rem', background: 'linear-gradient(135deg, rgba(249,115,22,0.08), rgba(139,92,246,0.08))', borderBottom: '1px solid var(--cf-border, #e2e8f0)' }}>
+                    <div className="d-flex justify-content-between align-items-start mb-2">
+                      <span className="badge bg-primary bg-opacity-15 text-primary border border-primary border-opacity-25 px-2.5 py-1 rounded-pill small fw-bold">
+                        {course.category || 'Professional'}
+                      </span>
+                      <span className="badge bg-warning bg-opacity-20 text-dark border border-warning border-opacity-30 px-3 py-1 rounded-pill fw-bold">
+                        🪙 {fee.toLocaleString('en-IN')} Coins
+                      </span>
+                    </div>
+                    <h5 className="fw-extrabold mb-1" style={{ color: 'var(--cf-text-main)' }}>{course.name}</h5>
+                    <span className="small text-muted font-monospace">{course.code} • {course.duration_weeks || 12} Weeks</span>
+                  </div>
+
+                  {/* Course Details */}
+                  <div className="p-3.5 flex-grow-1 d-flex flex-column justify-content-between">
+                    <p className="text-muted small mb-3" style={{ lineHeight: 1.6 }}>
+                      {course.description || 'Comprehensive industry-aligned curriculum with live coding labs, weekly assignments, and mock interview preparations.'}
+                    </p>
+
+                    {/* Installment Badge Helper */}
+                    <div className="p-2.5 rounded-3 mb-3" style={{ background: 'var(--cf-input-bg, #f8fafc)', border: '1px dashed var(--cf-border, #cbd5e1)' }}>
+                      <div className="small fw-bold text-success d-flex align-items-center gap-1">
+                        <i className="bi bi-check-circle-fill"></i> Installment Plans Available
+                      </div>
+                      <div className="small text-muted mt-0.5" style={{ fontSize: '0.78rem' }}>
+                        Pay full or split into 2, 3, or 4 milestones (as low as <strong>{Math.round(fee * 0.25)} 🪙/mo</strong>)
+                      </div>
+                    </div>
+
+                    {/* Action Button */}
                     <div>
-                      <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1rem', marginBottom: '0.2rem' }}>{course.name}</div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{course.code}</div>
+                      {req ? (
+                        <div className="p-2.5 rounded-3 text-center" style={{ background: STATUS_CONFIG[req.status]?.bg, color: STATUS_CONFIG[req.status]?.color }}>
+                          <span className="fw-bold small">{STATUS_CONFIG[req.status]?.icon} {STATUS_CONFIG[req.status]?.label}</span>
+                        </div>
+                      ) : (
+                        <button
+                          className="btn btn-primary w-100 rounded-pill fw-bold py-2 shadow-sm"
+                          onClick={() => handleOpenEnrollModal(course)}
+                        >
+                          🚀 Enroll with Coins / Installments
+                        </button>
+                      )}
                     </div>
-                    <span style={{ padding: '0.2rem 0.7rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, background: '#3b82f615', color: '#3b82f6' }}>{course.category}</span>
                   </div>
-
-                  {course.description && (
-                    <div style={{ fontSize: '0.83rem', color: 'var(--text-muted)', marginBottom: '0.8rem', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                      {course.description}
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
-                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>⏱ {course.duration_weeks} weeks</span>
-                    <span style={{ fontWeight: 800, fontSize: '1rem', color: canAfford || existing ? '#f59e0b' : '#ef4444', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      🪙 {coinsRequired.toLocaleString()}
-                      {!existing && !canAfford && <span style={{ fontSize: '0.7rem', color: '#ef4444' }}>⚠ Low</span>}
-                    </span>
-                  </div>
-
-                  {existing ? (
-                    <div style={{ padding: '0.6rem 1rem', borderRadius: '10px', background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: '0.85rem', textAlign: 'center' }}>
-                      {cfg.icon} {cfg.label === 'Approved' ? 'Enrolled ✓' : `Request ${cfg.label}`}
-                      {existing.batch_name && <div style={{ fontSize: '0.78rem', fontWeight: 400, marginTop: '0.2rem' }}>Batch: {existing.batch_name}</div>}
-                      {existing.coins_deducted > 0 && <div style={{ fontSize: '0.75rem', fontWeight: 600, marginTop: '0.2rem' }}>🪙 {existing.coins_deducted.toLocaleString()} coins deducted</div>}
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setShowModal(course)}
-                      disabled={submitting === course.id}
-                      style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: 'none', background: canAfford ? 'linear-gradient(135deg, #3b82f6, #10b981)' : 'linear-gradient(135deg, #94a3b8, #64748b)', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem', transition: 'opacity 0.2s' }}>
-                      {submitting === course.id ? 'Submitting...' : canAfford ? '📩 Request Enrollment' : '🪙 Insufficient Coins'}
-                    </button>
-                  )}
                 </div>
               </div>
             );
@@ -182,54 +267,112 @@ export default function CourseEnroll() {
         </div>
       )}
 
-      {/* Enrollment Request Modal */}
+      {/* ── MODAL: ENROLLMENT & INSTALLMENT PLAN SELECTOR ── */}
       {showModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
-          <div style={{ background: 'var(--card-bg)', borderRadius: '18px', padding: '2rem', width: '100%', maxWidth: '480px', boxShadow: '0 24px 70px rgba(0,0,0,0.4)' }}>
-            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📩</div>
-              <h3 style={{ margin: 0, fontWeight: 800, color: 'var(--text-primary)' }}>Request Enrollment</h3>
-              <div style={{ marginTop: '0.5rem', padding: '0.5rem 1rem', borderRadius: '10px', background: '#3b82f610', color: '#3b82f6', fontWeight: 700, fontSize: '0.9rem', display: 'inline-block' }}>
-                {showModal.name}
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1050, padding: '1rem' }}>
+          <div className="cf-card" style={{ width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+              <div>
+                <h5 className="fw-bold mb-0">🎓 Course Enrollment & Plan</h5>
+                <span className="small text-muted">{showModal.name} ({showModal.code})</span>
               </div>
+              <button className="btn-close" onClick={() => setShowModal(null)}></button>
             </div>
 
-            {/* Coin deduction info */}
-            <div style={{ padding: '1rem 1.2rem', borderRadius: '14px', background: 'linear-gradient(135deg, #7c3aed10, #f59e0b10)', border: '1px solid #f59e0b30', marginBottom: '1.2rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.2rem' }}>COINS REQUIRED</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#f59e0b' }}>🪙 {Math.round(parseFloat(showModal.fee_amount || 0)).toLocaleString()}</div>
+            <form onSubmit={handleEnrollSubmit} className="d-flex flex-column gap-3">
+              {/* Fee & Wallet Breakdown */}
+              <div className="p-3 rounded-3" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.1), rgba(139,92,246,0.1))', border: '1.5px solid rgba(249,115,22,0.2)' }}>
+                <div className="d-flex justify-content-between align-items-center mb-1.5">
+                  <span className="text-muted small fw-bold">Total Course Fee:</span>
+                  <strong className="text-warning fs-5">🪙 {Math.round(parseFloat(showModal.fee_amount || 0)).toLocaleString('en-IN')} Coins</strong>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.2rem' }}>YOUR BALANCE</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: coinBalance >= Math.round(parseFloat(showModal.fee_amount || 0)) ? '#10b981' : '#ef4444' }}>
-                    🪙 {coinBalance.toLocaleString()}
-                  </div>
+                <div className="d-flex justify-content-between align-items-center">
+                  <span className="text-muted small fw-bold">Your Wallet Balance:</span>
+                  <strong className="text-success fs-6">🪙 {coinBalance.toLocaleString('en-IN')} Coins</strong>
                 </div>
               </div>
-              <div style={{ marginTop: '0.8rem', height: '6px', borderRadius: '999px', background: 'var(--border-color)', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${Math.min(100, (coinBalance / Math.max(1, Math.round(parseFloat(showModal.fee_amount || 0)))) * 100)}%`, background: coinBalance >= Math.round(parseFloat(showModal.fee_amount || 0)) ? 'linear-gradient(90deg, #10b981, #3b82f6)' : '#ef4444', borderRadius: '999px' }} />
-              </div>
-              <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-                ⏱ {showModal.duration_weeks} weeks course &nbsp;·&nbsp; Coins deducted only on admin approval
-              </div>
-            </div>
 
-            <form onSubmit={handleEnrollSubmit}>
-              <div style={{ marginBottom: '1.2rem' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>Why do you want to join this course? <span style={{ color: '#94a3b8' }}>(optional)</span></label>
-                <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder='e.g. I want to build my career in web development...' rows={3}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--card-bg)', color: 'var(--text-primary)', resize: 'vertical', boxSizing: 'border-box', fontSize: '0.9rem' }} />
+              {/* Installment Plan Radio Selection */}
+              <div>
+                <label className="form-label small fw-bold text-muted text-uppercase" style={{ letterSpacing: '0.5px' }}>
+                  Select Payment / Installment Plan *
+                </label>
+                <div className="d-flex flex-column gap-2">
+                  {PAYMENT_PLANS.map(plan => {
+                    const { upfront, remaining, installmentsCount } = calculateMilestones(showModal.fee_amount, plan.id);
+                    const isSelected = selectedPlan === plan.id;
+                    const canAffordUpfront = coinBalance >= upfront;
+
+                    return (
+                      <label
+                        key={plan.id}
+                        onClick={() => setSelectedPlan(plan.id)}
+                        style={{
+                          padding: '0.85rem 1rem',
+                          borderRadius: '12px',
+                          border: `1.5px solid ${isSelected ? '#f97316' : 'var(--cf-border, #cbd5e1)'}`,
+                          background: isSelected ? 'rgba(249,115,22,0.06)' : 'var(--cf-input-bg, #f8fafc)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '0.75rem',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="payment_plan"
+                          checked={isSelected}
+                          onChange={() => setSelectedPlan(plan.id)}
+                          style={{ marginTop: '0.2rem', accentColor: '#f97316' }}
+                        />
+                        <div className="flex-grow-1">
+                          <div className="d-flex justify-content-between align-items-center">
+                            <strong style={{ color: 'var(--cf-text-main)', fontSize: '0.92rem' }}>{plan.label}</strong>
+                            <span className={`badge ${canAffordUpfront ? 'bg-success' : 'bg-danger'} rounded-pill small`}>
+                              Upfront: {upfront} 🪙
+                            </span>
+                          </div>
+                          <p className="text-muted small mb-0 mt-1" style={{ fontSize: '0.8rem', lineHeight: 1.4 }}>
+                            {plan.desc}
+                          </p>
+                          {remaining > 0 && (
+                            <div className="text-primary small fw-bold mt-1" style={{ fontSize: '0.78rem' }}>
+                              🗓️ Remaining {remaining} 🪙 split across {installmentsCount - 1} upcoming milestone(s).
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
 
-              <div style={{ padding: '0.75rem', borderRadius: '10px', background: '#fef3c7', border: '1px solid #fcd34d', marginBottom: '1.2rem', fontSize: '0.82rem', color: '#92400e' }}>
-                ⏳ Your request will be reviewed by admin. <strong>No coins deducted yet</strong> — coins are only deducted when your enrollment is approved.
+              {/* Message to Admission Committee */}
+              <div>
+                <label className="form-label small fw-bold text-muted">Note to Admissions Committee (Optional)</label>
+                <textarea
+                  rows="2"
+                  placeholder="e.g. Please enroll me in the Morning batch..."
+                  value={message}
+                  onChange={e => setMessage(e.target.value)}
+                  className="form-control"
+                  style={{ fontSize: '0.88rem' }}
+                ></textarea>
               </div>
 
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <button type='button' onClick={() => setShowModal(null)} style={{ flex: 1, padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
-                <button type='submit' style={{ flex: 2, padding: '0.8rem', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #3b82f6, #10b981)', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>📩 Submit Request</button>
+              {/* Action Buttons */}
+              <div className="d-flex gap-2 justify-content-end mt-2 pt-2 border-top">
+                <button type="button" className="btn btn-outline-secondary px-3" onClick={() => setShowModal(null)}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting === showModal.id}
+                  className="btn btn-warning px-4 fw-bold text-dark"
+                >
+                  {submitting === showModal.id ? 'Submitting...' : 'Confirm & Request Enrollment 🚀'}
+                </button>
               </div>
             </form>
           </div>

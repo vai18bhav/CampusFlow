@@ -429,6 +429,7 @@ const Finance = () => {
                       value={payData.payment_method}
                       onChange={(e) => setPayData({ ...payData, payment_method: e.target.value })}
                     >
+                      <option value="COINS">🪙 Student Coins Wallet (1 Coin = ₹1)</option>
                       <option value="UPI">UPI Payment</option>
                       <option value="CASH">Cash</option>
                       <option value="BANK_TRANSFER">Bank Transfer / NetBanking</option>

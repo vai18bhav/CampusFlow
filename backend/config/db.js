@@ -3,11 +3,14 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const dbHost = process.env.DB_HOST || 'localhost';
-const dbPort = parseInt(process.env.DB_PORT || '3307', 10);
-const dbUser = process.env.DB_USER || 'root';
-const dbPassword = process.env.DB_PASSWORD || 'Pass@123';
-const dbName = process.env.DB_NAME || 'campusflow_db';
+// Helper to strip accidental quotes and spaces from env vars
+const sanitize = (val) => typeof val === 'string' ? val.trim().replace(/^["']|["']$/g, '') : val;
+
+const dbHost = sanitize(process.env.DB_HOST) || 'mysql-33a4f609-vaibhavgawande509-015a.e.aivencloud.com';
+const dbPort = parseInt(process.env.DB_PORT || '26103', 10);
+const dbUser = sanitize(process.env.DB_USER) || 'avnadmin';
+const dbPassword = sanitize(process.env.DB_PASSWORD) || 'AVNS_dZDQDUbcD0Hgrur9DqM';
+const dbName = sanitize(process.env.DB_NAME) || 'campusflow_db';
 
 // Support SSL connection for Cloud MySQL (Aiven, TiDB, Clever Cloud, Railway, AWS RDS, etc.)
 const isRemoteHost = dbHost !== 'localhost' && dbHost !== '127.0.0.1';

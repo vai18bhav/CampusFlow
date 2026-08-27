@@ -9,7 +9,7 @@ const { authenticateJWT } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
 
 router.use(authenticateJWT);
-router.use(authorizeRoles('SUPER_ADMIN'));
+router.use(authorizeRoles('SUPER_ADMIN', 'ADMIN'));
 
 // GET /api/admin/email-templates
 router.get('/', getEmailTemplates);

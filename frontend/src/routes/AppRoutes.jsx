@@ -220,7 +220,7 @@ const AppRoutes = () => {
         <Route
           path="/email-templates"
           element={
-            <RoleRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
+            <RoleRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN]}>
               <EmailTemplates />
             </RoleRoute>
           }

@@ -78,6 +78,7 @@ async function run() {
           id INT AUTO_INCREMENT PRIMARY KEY,
           token VARCHAR(120) NOT NULL UNIQUE,
           sales_exec_id INT,
+          created_by INT,
           course_id INT,
           currency ENUM('INR','USD','ANY') DEFAULT 'ANY',
           status ENUM('ACTIVE','EXPIRED','USED') DEFAULT 'ACTIVE',
@@ -85,11 +86,21 @@ async function run() {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           FOREIGN KEY (sales_exec_id) REFERENCES sales_executives(id) ON DELETE SET NULL,
+          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
           FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
       `);
       console.log('  + Created admission_links table');
-    } else { console.log('  ✓ admission_links table already exists'); }
+    } else {
+      console.log('  ✓ admission_links table already exists');
+      if (!await columnExists(conn, 'admission_links', 'created_by')) {
+        await conn.query("ALTER TABLE admission_links ADD COLUMN created_by INT DEFAULT NULL AFTER sales_exec_id");
+        try {
+          await conn.query("ALTER TABLE admission_links ADD CONSTRAINT fk_admission_link_creator FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL");
+        } catch (fkErr) {}
+        console.log('  + Added created_by column to admission_links');
+      }
+    }
 
     // 6. Extend admissions.status enum
     await conn.query(`

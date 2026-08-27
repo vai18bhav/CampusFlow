@@ -31,25 +31,72 @@ const generateInvoiceNumber = (admissionId) => `INV-${new Date().getFullYear()}-
 const createAdmissionLink = async (req, res) => {
   try {
     const { course_id, currency, expires_in_days } = req.body;
-    const salesExecId = req.user?.sales_exec_id || null;
 
-    // Verify course exists if provided
-    if (course_id) {
-      const [courses] = await pool.query('SELECT id FROM courses WHERE id = ? AND status = "ACTIVE"', [course_id]);
-      if (courses.length === 0) return errorResponse(res, 404, 'Course not found or inactive');
+    let salesExecId = req.user?.sales_exec_id || null;
+    const userId = req.user?.id || null;
+
+    // Auto-ensure sales_exec_id for SALES_EXECUTIVE role if missing
+    if (!salesExecId && req.user?.role_name === 'SALES_EXECUTIVE' && userId) {
+      const [existing] = await pool.query('SELECT id FROM sales_executives WHERE user_id = ?', [userId]);
+      if (existing.length > 0) {
+        salesExecId = existing[0].id;
+        req.user.sales_exec_id = salesExecId;
+      } else {
+        const empId = `EMP-SLS-${String(userId).padStart(3, '0')}`;
+        const [ins] = await pool.query(
+          'INSERT INTO sales_executives (user_id, employee_id, target_conversions) VALUES (?, ?, 20)',
+          [userId, empId]
+        );
+        salesExecId = ins.insertId;
+        req.user.sales_exec_id = salesExecId;
+      }
+    }
+
+    // Sanitize and validate course_id
+    let parsedCourseId = null;
+    if (course_id !== undefined && course_id !== null && String(course_id).trim() !== '' && String(course_id) !== '0') {
+      parsedCourseId = parseInt(course_id, 10);
+      if (isNaN(parsedCourseId)) {
+        return errorResponse(res, 400, 'Invalid course ID provided');
+      }
+      const [courses] = await pool.query('SELECT id FROM courses WHERE id = ? AND status = "ACTIVE"', [parsedCourseId]);
+      if (courses.length === 0) {
+        return errorResponse(res, 404, 'Selected course not found or is inactive');
+      }
+    }
+
+    // Sanitize and validate currency
+    const selectedCurrency = (currency || 'ANY').toString().trim().toUpperCase();
+    if (!['INR', 'USD', 'ANY'].includes(selectedCurrency)) {
+      return errorResponse(res, 400, 'Invalid currency selection. Must be INR, USD, or ANY');
+    }
+
+    // Sanitize and validate expires_in_days
+    let expiresAt = null;
+    if (expires_in_days !== undefined && expires_in_days !== null && String(expires_in_days).trim() !== '') {
+      const days = parseInt(expires_in_days, 10);
+      if (isNaN(days) || days <= 0) {
+        return errorResponse(res, 400, 'Link expiry days must be a positive number');
+      }
+      expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + days);
     }
 
     const token = crypto.randomBytes(32).toString('hex');
-    let expiresAt = null;
-    if (expires_in_days) {
-      expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + parseInt(expires_in_days, 10));
-    }
 
-    const [result] = await pool.query(
-      'INSERT INTO admission_links (token, sales_exec_id, course_id, currency, expires_at) VALUES (?, ?, ?, ?, ?)',
-      [token, salesExecId, course_id || null, (currency || 'ANY').toUpperCase(), expiresAt]
-    );
+    let result;
+    try {
+      [result] = await pool.query(
+        'INSERT INTO admission_links (token, sales_exec_id, created_by, course_id, currency, expires_at) VALUES (?, ?, ?, ?, ?, ?)',
+        [token, salesExecId, userId, parsedCourseId, selectedCurrency, expiresAt]
+      );
+    } catch (dbErr) {
+      // Fallback query if created_by column does not exist on older DB setup
+      [result] = await pool.query(
+        'INSERT INTO admission_links (token, sales_exec_id, course_id, currency, expires_at) VALUES (?, ?, ?, ?, ?)',
+        [token, salesExecId, parsedCourseId, selectedCurrency, expiresAt]
+      );
+    }
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const admissionUrl = `${frontendUrl}/apply/${token}`;
@@ -58,10 +105,11 @@ const createAdmissionLink = async (req, res) => {
       id: result.insertId,
       token,
       admissionUrl,
-      currency: (currency || 'ANY').toUpperCase(),
+      currency: selectedCurrency,
       expiresAt
     });
   } catch (error) {
+    console.error('createAdmissionLink error:', error);
     return errorResponse(res, 500, 'Failed to create admission link', error.message);
   }
 };
@@ -73,25 +121,61 @@ const createAdmissionLink = async (req, res) => {
 const getAdmissionLinks = async (req, res) => {
   try {
     const userRole = req.user?.role_name?.toUpperCase();
-    let query = `
-      SELECT al.*, c.name AS course_name,
-             u.full_name AS created_by_name,
-             (SELECT COUNT(*) FROM admissions a WHERE a.admission_link_id = al.id) AS submissions_count
-      FROM admission_links al
-      LEFT JOIN courses c ON al.course_id = c.id
-      LEFT JOIN sales_executives se ON al.sales_exec_id = se.id
-      LEFT JOIN users u ON se.user_id = u.id
-      WHERE 1=1
-    `;
-    const params = [];
+    let salesExecId = req.user?.sales_exec_id || null;
 
-    if (!['SUPER_ADMIN', 'ADMIN'].includes(userRole)) {
-      query += ' AND al.sales_exec_id = ?';
-      params.push(req.user.sales_exec_id || 0);
+    if (!salesExecId && userRole === 'SALES_EXECUTIVE' && req.user?.id) {
+      const [existing] = await pool.query('SELECT id FROM sales_executives WHERE user_id = ?', [req.user.id]);
+      if (existing.length > 0) {
+        salesExecId = existing[0].id;
+        req.user.sales_exec_id = salesExecId;
+      }
     }
 
-    query += ' ORDER BY al.id DESC';
-    const [links] = await pool.query(query, params);
+    let links;
+    try {
+      let query = `
+        SELECT al.*, c.name AS course_name,
+               COALESCE(u_exec.full_name, u_creator.full_name, 'Admin') AS created_by_name,
+               (SELECT COUNT(*) FROM admissions a WHERE a.admission_link_id = al.id) AS submissions_count
+        FROM admission_links al
+        LEFT JOIN courses c ON al.course_id = c.id
+        LEFT JOIN sales_executives se ON al.sales_exec_id = se.id
+        LEFT JOIN users u_exec ON se.user_id = u_exec.id
+        LEFT JOIN users u_creator ON al.created_by = u_creator.id
+        WHERE 1=1
+      `;
+      const params = [];
+
+      if (!['SUPER_ADMIN', 'ADMIN'].includes(userRole)) {
+        query += ' AND (al.sales_exec_id = ? OR al.created_by = ?)';
+        params.push(salesExecId || 0, req.user?.id || 0);
+      }
+
+      query += ' ORDER BY al.id DESC';
+      const [rows] = await pool.query(query, params);
+      links = rows;
+    } catch (e) {
+      let fallbackQuery = `
+        SELECT al.*, c.name AS course_name,
+               u.full_name AS created_by_name,
+               (SELECT COUNT(*) FROM admissions a WHERE a.admission_link_id = al.id) AS submissions_count
+        FROM admission_links al
+        LEFT JOIN courses c ON al.course_id = c.id
+        LEFT JOIN sales_executives se ON al.sales_exec_id = se.id
+        LEFT JOIN users u ON se.user_id = u.id
+        WHERE 1=1
+      `;
+      const fallbackParams = [];
+
+      if (!['SUPER_ADMIN', 'ADMIN'].includes(userRole)) {
+        fallbackQuery += ' AND al.sales_exec_id = ?';
+        fallbackParams.push(salesExecId || 0);
+      }
+
+      fallbackQuery += ' ORDER BY al.id DESC';
+      const [rows] = await pool.query(fallbackQuery, fallbackParams);
+      links = rows;
+    }
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     links.forEach(l => { l.admission_url = `${frontendUrl}/apply/${l.token}`; });

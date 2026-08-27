@@ -5,7 +5,9 @@ const {
   getAdmissionById,
   createAdmission,
   updateAdmission,
-  toggleAdmissionStatus
+  toggleAdmissionStatus,
+  approveAdmission,
+  rejectAdmission
 } = require('../controllers/admissionController');
 const { authenticateJWT } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
@@ -19,5 +21,8 @@ router.post('/', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'SALES_EXECUTIVE'), crea
 router.post('/register', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'SALES_EXECUTIVE'), createAdmission);
 router.put('/:id', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'SALES_EXECUTIVE'), updateAdmission);
 router.patch('/:id/status', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'SALES_EXECUTIVE'), toggleAdmissionStatus);
+router.patch('/:id/approve', authorizeRoles('SUPER_ADMIN', 'ADMIN'), approveAdmission);
+router.patch('/:id/reject', authorizeRoles('SUPER_ADMIN', 'ADMIN'), rejectAdmission);
 
 module.exports = router;
+

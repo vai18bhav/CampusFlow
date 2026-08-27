@@ -8,18 +8,39 @@ const { sendPaymentReceiptEmail } = require('../utils/emailService');
  */
 const getFinanceSummary = async (req, res) => {
   try {
-    const [summary] = await pool.query(`
+    const [summaryRows] = await pool.query(`
       SELECT 
+        COALESCE(currency, 'INR') as currency,
         COALESCE(SUM(net_amount), 0) as total_revenue,
         COALESCE(SUM(paid_amount), 0) as total_collected,
         COALESCE(SUM(due_amount), 0) as total_pending,
         COALESCE(SUM(CASE WHEN due_date < CURRENT_DATE() AND due_amount > 0 THEN due_amount ELSE 0 END), 0) as overdue_amount
       FROM invoices
       WHERE status != 'CANCELLED'
+      GROUP BY currency
     `);
 
+    // Format results to map by currency
+    const summary = {};
+    summaryRows.forEach(row => {
+      summary[row.currency.toUpperCase()] = {
+        total_revenue: row.total_revenue,
+        total_collected: row.total_collected,
+        total_pending: row.total_pending,
+        overdue_amount: row.overdue_amount
+      };
+    });
+
+    // Provide default fallbacks if missing
+    if (!summary['INR']) {
+      summary['INR'] = { total_revenue: 0, total_collected: 0, total_pending: 0, overdue_amount: 0 };
+    }
+    if (!summary['USD']) {
+      summary['USD'] = { total_revenue: 0, total_collected: 0, total_pending: 0, overdue_amount: 0 };
+    }
+
     return successResponse(res, 200, 'Finance summary retrieved successfully', {
-      summary: summary[0] || { total_revenue: 0, total_collected: 0, total_pending: 0, overdue_amount: 0 }
+      summary
     });
   } catch (error) {
     return errorResponse(res, 500, 'Failed to fetch finance summary', error.message);
@@ -321,40 +342,7 @@ const recordPayment = async (req, res) => {
       );
     }
 
-    // 3b. If paying via Student Coin Wallet (1 Coin = ₹1)
-    if (payMethod === 'COINS') {
-      const coinsNeeded = Math.round(payAmount);
-      const [wallets] = await connection.query(
-        'SELECT * FROM student_wallet WHERE student_id = ? FOR UPDATE',
-        [invoice.student_id]
-      );
-      const curBal = wallets.length ? wallets[0].coins_balance : 0;
-      if (!wallets.length || curBal < coinsNeeded) {
-        await connection.rollback();
-        return errorResponse(
-          res,
-          400,
-          `Insufficient coins in wallet! Required: ${coinsNeeded} 🪙, Available: ${curBal} 🪙.`
-        );
-      }
-      const newBal = curBal - coinsNeeded;
-      await connection.query(
-        'UPDATE student_wallet SET coins_balance = ?, total_spent = total_spent + ? WHERE student_id = ?',
-        [newBal, coinsNeeded, invoice.student_id]
-      );
-      await connection.query(
-        `INSERT INTO coin_transactions (student_id, type, coins, balance_after, reason, reference_type, reference_id, created_by)
-         VALUES (?, 'DEBIT', ?, ?, ?, 'FEE_PAYMENT', ?, ?)`,
-        [
-          invoice.student_id,
-          coinsNeeded,
-          newBal,
-          `Tuition Installment Payment (Invoice #${invoice.invoice_number})`,
-          invoiceId,
-          req.user?.id || null
-        ]
-      );
-    }
+    // 3b. Coin payment option is disabled in standard currency model
 
     // 4. Record Payment Entry
     const [payResult] = await connection.query(
@@ -466,7 +454,7 @@ const getStudentFinance = async (req, res) => {
     );
 
     const [installments] = await pool.query(
-      `SELECT inst.*, inv.invoice_number 
+      `SELECT inst.*, inv.invoice_number, inv.currency 
        FROM installments inst
        JOIN invoices inv ON inst.invoice_id = inv.id
        WHERE inv.student_id = ? ORDER BY inst.due_date ASC`,
@@ -474,7 +462,7 @@ const getStudentFinance = async (req, res) => {
     );
 
     const [payments] = await pool.query(
-      `SELECT p.*, inv.invoice_number 
+      `SELECT p.*, inv.invoice_number, inv.currency 
        FROM payments p
        JOIN invoices inv ON p.invoice_id = inv.id
        WHERE p.student_id = ? ORDER BY p.payment_date DESC`,
@@ -525,6 +513,22 @@ const getPaymentHistory = async (req, res) => {
   }
 };
 
+const { generateInvoicePdfServerSide } = require('../services/invoicePdfService');
+
+const downloadInvoicePdf = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pdfRes = await generateInvoicePdfServerSide(id);
+    if (!pdfRes) return errorResponse(res, 404, 'Invoice not found');
+
+    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Content-Disposition', `attachment; filename="${pdfRes.fileName}"`);
+    return res.send(pdfRes.contentHtml);
+  } catch (error) {
+    return errorResponse(res, 500, 'Failed to download invoice PDF', error.message);
+  }
+};
+
 module.exports = {
   getFinanceSummary,
   getInvoices,
@@ -533,5 +537,6 @@ module.exports = {
   createInstallments,
   recordPayment,
   getStudentFinance,
-  getPaymentHistory
+  getPaymentHistory,
+  downloadInvoicePdf
 };

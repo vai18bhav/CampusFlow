@@ -422,10 +422,15 @@ const toggleAdmissionStatus = async (req, res) => {
   }
 };
 
+// Re-export approve/reject from admissionLinkController for route convenience
+const { approveAdmission, rejectAdmission } = require('./admissionLinkController');
+
 module.exports = {
   getAdmissions,
   getAdmissionById,
   createAdmission,
   updateAdmission,
-  toggleAdmissionStatus
+  toggleAdmissionStatus,
+  approveAdmission,
+  rejectAdmission
 };

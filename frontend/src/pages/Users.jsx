@@ -12,6 +12,15 @@ const Users = () => {
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
 
+  // Filters
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  // Password reset modal state
+  const [resetUser, setResetUser] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     role_id: '',
     full_name: '',
@@ -22,17 +31,28 @@ const Users = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [roleFilter, statusFilter]);
 
   const fetchUsers = async () => {
     try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (roleFilter) params.append('role', roleFilter);
+      if (statusFilter) params.append('status', statusFilter);
+
       const [resU, resR, resP] = await Promise.all([
-        api.get('/users'),
+        api.get(`/users?${params.toString()}`),
         api.get('/users/roles'),
         api.get('/users/pending-approvals')
       ]);
 
-      if (resU.success) setUsers(resU.data.users);
+      if (resU.success) {
+        let userList = resU.data.users || [];
+        if (role === 'ADMIN') {
+          userList = userList.filter(u => !['SUPER_ADMIN', 'ADMIN'].includes((u.role_name || '').toUpperCase().replace(/\s+/g, '_')));
+        }
+        setUsers(userList);
+      }
       if (resR.success) setRoles(resR.data.roles);
       if (resP.success) setPendingApprovals(resP.data.pendingUsers);
     } catch (err) {
@@ -53,6 +73,26 @@ const Users = () => {
       }
     } catch (err) {
       alert(typeof err === 'string' ? err : 'User creation failed');
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!resetUser || !newPassword || newPassword.length < 6) {
+      return alert('New password must be at least 6 characters');
+    }
+    setResetLoading(true);
+    try {
+      const res = await api.patch(`/users/${resetUser.id}/reset-password`, { new_password: newPassword });
+      if (res.success) {
+        alert(res.message || 'Password reset successfully!');
+        setResetUser(null);
+        setNewPassword('');
+      }
+    } catch (err) {
+      alert(typeof err === 'string' ? err : 'Password reset failed');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -83,7 +123,7 @@ const Users = () => {
   const handleToggleStatus = async (userObj) => {
     const newStatus = userObj.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
     try {
-      await api.put(`/users/${userObj.id}`, { status: newStatus });
+      await api.patch(`/users/${userObj.id}/status`, { status: newStatus });
       fetchUsers();
     } catch (err) {
       alert('Failed to update status');
@@ -113,7 +153,7 @@ const Users = () => {
       case 'ACTIVE':
         return <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-1.5 rounded-pill fw-semibold"><i className="bi bi-check-circle-fill me-1"></i> Active</span>;
       case 'PENDING':
-        return <span className="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-3 py-1.5 rounded-pill fw-semibold"><i className="bi bi-clock-fill me-1"></i> Pending Approval</span>;
+        return <span className="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-3 py-1.5 rounded-pill fw-semibold"><i className="bi bi-clock-fill me-1"></i> Pending</span>;
       case 'INACTIVE':
         return <span className="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-3 py-1.5 rounded-pill fw-semibold"><i className="bi bi-pause-circle-fill me-1"></i> Inactive</span>;
       default:
@@ -135,27 +175,43 @@ const Users = () => {
     { header: 'Assigned Role', accessor: 'role_name', render: (r) => <span className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1 rounded-pill fw-semibold">{r.role_name?.replace('_', ' ')}</span> },
     { header: 'Phone', accessor: 'phone', render: (r) => r.phone || <span className="text-muted small">N/A</span> },
     { header: 'Account Status', accessor: 'status', render: (r) => renderStatusBadge(r.status) },
-    { header: 'Actions', accessor: 'id', render: (r) => (
-        <div className="d-flex gap-1.5">
-          <button
-            className={`btn btn-sm ${r.status === 'ACTIVE' ? 'btn-outline-secondary' : 'btn-outline-success'} rounded-pill px-2.5 shadow-sm`}
-            onClick={() => handleToggleStatus(r)}
-            title="Toggle Status"
-          >
-            <i className={`bi ${r.status === 'ACTIVE' ? 'bi-person-x-fill' : 'bi-person-check-fill'} me-1`}></i>
-            {r.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
-          </button>
-          {['SUPER_ADMIN', 'ADMIN'].includes(role) && r.id !== user.id && (
+    { header: 'Actions', accessor: 'id', render: (r) => {
+        const targetRoleNorm = (r.role_name || '').toUpperCase().replace(/\s+/g, '_');
+        const isProtectedTarget = ['SUPER_ADMIN', 'ADMIN'].includes(targetRoleNorm);
+        const isAdminUser = role === 'ADMIN';
+
+        if (isAdminUser && isProtectedTarget) {
+          return <span className="badge bg-light text-muted border px-2 py-1"><i className="bi bi-shield-lock me-1"></i>Protected Account</span>;
+        }
+
+        return (
+          <div className="d-flex gap-1">
             <button
-              className="btn btn-sm btn-outline-danger rounded-pill px-2.5 shadow-sm"
-              onClick={() => handleDeleteUser(r.id, r.full_name)}
-              title="Permanently Delete User"
+              className={`btn btn-sm ${r.status === 'ACTIVE' ? 'btn-outline-secondary' : 'btn-outline-success'} rounded-pill px-2 shadow-sm`}
+              onClick={() => handleToggleStatus(r)}
+              title="Toggle Status"
             >
-              <i className="bi bi-trash-fill me-1"></i> Delete
+              <i className={`bi ${r.status === 'ACTIVE' ? 'bi-person-x-fill' : 'bi-person-check-fill'}`}></i>
             </button>
-          )}
-        </div>
-      )
+            <button
+              className="btn btn-sm btn-outline-warning text-dark rounded-pill px-2 shadow-sm"
+              onClick={() => { setResetUser(r); setNewPassword(''); }}
+              title="Reset User Password"
+            >
+              <i className="bi bi-key-fill"></i>
+            </button>
+            {role === 'SUPER_ADMIN' && r.id !== user.id && (
+              <button
+                className="btn btn-sm btn-outline-danger rounded-pill px-2 shadow-sm"
+                onClick={() => handleDeleteUser(r.id, r.full_name)}
+                title="Permanently Delete User"
+              >
+                <i className="bi bi-trash-fill"></i>
+              </button>
+            )}
+          </div>
+        );
+      }
     }
   ];
 
@@ -181,8 +237,8 @@ const Users = () => {
     <div className="cf-page-enter">
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-          <h3 className="fw-bold text-dark mb-1">System User Directory & Approvals</h3>
-          <p className="text-muted mb-0">Review pending student registrations, assign staff roles, and manage access status.</p>
+          <h3 className="fw-bold text-dark mb-1">User Accounts &amp; Permissions</h3>
+          <p className="text-muted mb-0">FR-001: Manage all system users across Admin, Sales, Trainer, Support, and Student roles</p>
         </div>
 
         {['SUPER_ADMIN', 'ADMIN'].includes(role) && (
@@ -190,6 +246,35 @@ const Users = () => {
             <i className="bi bi-person-plus-fill me-1"></i> Create System User
           </button>
         )}
+      </div>
+
+      {/* Role & Status Filter Bar */}
+      <div className="card border-0 shadow-sm rounded-4 mb-4 p-3">
+        <div className="row g-3 align-items-center">
+          <div className="col-md-4">
+            <label className="form-label small fw-semibold text-muted mb-1">Filter by System Role</label>
+            <select className="form-select form-select-sm" value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
+              <option value="">All System Roles</option>
+              {roles.map(r => (
+                <option key={r.id} value={r.name}>{r.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="col-md-4">
+            <label className="form-label small fw-semibold text-muted mb-1">Filter by Status</label>
+            <select className="form-select form-select-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option value="">All Statuses</option>
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="INACTIVE">INACTIVE</option>
+              <option value="PENDING">PENDING</option>
+            </select>
+          </div>
+          <div className="col-md-4 d-flex align-items-end">
+            <button className="btn btn-sm btn-outline-secondary rounded-pill px-3 mt-4" onClick={() => { setRoleFilter(''); setStatusFilter(''); }}>
+              Reset Filters
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Navigation Tabs */}
@@ -214,7 +299,7 @@ const Users = () => {
       {loading ? (
         <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>
       ) : activeTab === 'pending' ? (
-        <DataTable columns={pendingColumns} data={pendingApprovals} searchKey="full_name" title="Pending Student Registrations (Requires Admin Approval)" />
+        <DataTable columns={pendingColumns} data={pendingApprovals} searchKey="full_name" title="Pending Student Registrations" />
       ) : (
         <DataTable columns={columns} data={users} searchKey="full_name" title="Registered User Accounts" />
       )}
@@ -234,7 +319,9 @@ const Users = () => {
                     <label className="form-label small fw-semibold text-muted">System Role</label>
                     <select className="form-select cf-form-control" value={formData.role_id} onChange={e => setFormData({ ...formData, role_id: e.target.value })} required>
                       <option value="">-- Select Role --</option>
-                      {roles.map(r => <option key={r.id} value={r.id}>{r.name} ({r.description})</option>)}
+                      {roles
+                        .filter(r => role === 'SUPER_ADMIN' || !['SUPER_ADMIN', 'ADMIN'].includes(r.name.toUpperCase().replace(/\s+/g, '_')))
+                        .map(r => <option key={r.id} value={r.id}>{r.name} ({r.description})</option>)}
                     </select>
                   </div>
                   <div className="mb-3">
@@ -259,6 +346,39 @@ const Users = () => {
                 <div className="modal-footer border-top">
                   <button type="button" className="btn btn-light rounded-pill" onClick={() => setShowModal(false)}>Cancel</button>
                   <button type="submit" className="btn btn-primary rounded-pill px-4 fw-semibold">Create User Account</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Reset Modal (FR-001) */}
+      {resetUser && (
+        <div className="modal d-block bg-dark bg-opacity-50" tabIndex="-1">
+          <div className="modal-dialog modal-dialog-centered modal-sm">
+            <div className="modal-content border-0 shadow-lg rounded-4">
+              <div className="modal-header border-bottom">
+                <h6 className="modal-title fw-bold">Reset Password</h6>
+                <button type="button" className="btn-close" onClick={() => setResetUser(null)}></button>
+              </div>
+              <form onSubmit={handleResetPasswordSubmit}>
+                <div className="modal-body">
+                  <p className="small text-muted mb-2">Reset password for <strong>{resetUser.full_name}</strong> ({resetUser.role_name}):</p>
+                  <input
+                    type="password"
+                    className="form-control form-control-sm"
+                    placeholder="New Password (min 6 chars)"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="modal-footer border-top-0 pt-0">
+                  <button type="button" className="btn btn-sm btn-light rounded-pill" onClick={() => setResetUser(null)}>Cancel</button>
+                  <button type="submit" className="btn btn-sm btn-warning rounded-pill px-3 fw-bold" disabled={resetLoading}>
+                    {resetLoading ? 'Resetting...' : 'Reset Password'}
+                  </button>
                 </div>
               </form>
             </div>

@@ -113,6 +113,109 @@ const Finance = () => {
     }
   };
 
+  const handlePrintInvoice = () => {
+    if (!selectedInvoice) return;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Invoice - ${selectedInvoice.invoice_number}</title>
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+          <style>
+            body { padding: 30px; font-family: sans-serif; }
+            .invoice-header { border-bottom: 2px solid #dee2e6; padding-bottom: 20px; margin-bottom: 20px; }
+            .logo { font-size: 24px; font-weight: bold; color: #8b5cf6; }
+          </style>
+        </head>
+        <body onload="window.print(); window.close();">
+          <div class="invoice-header d-flex justify-content-between align-items-center">
+            <div>
+              <div class="logo">CampusFlow</div>
+              <div class="text-muted">Enterprise Training & Admission Management Portal</div>
+            </div>
+            <div class="text-end">
+              <h4>INVOICE</h4>
+              <div class="font-monospace">${selectedInvoice.invoice_number}</div>
+            </div>
+          </div>
+          <div class="row mb-4">
+            <div class="col-6">
+              <strong>Invoice To:</strong>
+              <div>${selectedInvoice.student_name} (${selectedInvoice.roll_number})</div>
+              <div>${selectedInvoice.student_email}</div>
+              <div>${selectedInvoice.student_phone || '-'}</div>
+            </div>
+            <div class="col-6 text-end">
+              <strong>Admission details:</strong>
+              <div>Course: ${selectedInvoice.course_name}</div>
+              <div>Admission Number: ${selectedInvoice.admission_number}</div>
+              <div>Date: ${selectedInvoice.invoice_date ? selectedInvoice.invoice_date.split('T')[0] : ''}</div>
+            </div>
+          </div>
+          <table class="table table-bordered">
+            <thead class="table-light">
+              <tr>
+                <th>Description</th>
+                <th class="text-end">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>${selectedInvoice.course_name} - Course Tuition Fee</td>
+                <td class="text-end">${selectedInvoice.currency === 'USD' ? '$' : '₹'} ${parseFloat(selectedInvoice.total_amount).toLocaleString()}</td>
+              </tr>
+              ${selectedInvoice.discount_amount > 0 ? `
+              <tr>
+                <td class="text-danger text-end">Discount Applied:</td>
+                <td class="text-danger text-end">- ${selectedInvoice.currency === 'USD' ? '$' : '₹'} ${parseFloat(selectedInvoice.discount_amount).toLocaleString()}</td>
+              </tr>
+              ` : ''}
+              <tr class="fw-bold">
+                <td class="text-end">Net Total:</td>
+                <td class="text-end">${selectedInvoice.currency === 'USD' ? '$' : '₹'} ${parseFloat(selectedInvoice.net_amount || selectedInvoice.total_amount).toLocaleString()}</td>
+              </tr>
+              <tr class="text-success fw-bold">
+                <td class="text-end">Paid Collected:</td>
+                <td class="text-end">${selectedInvoice.currency === 'USD' ? '$' : '₹'} ${parseFloat(selectedInvoice.paid_amount || 0).toLocaleString()}</td>
+              </tr>
+              <tr class="text-danger fw-bold">
+                <td class="text-end">Remaining Due:</td>
+                <td class="text-end">${selectedInvoice.currency === 'USD' ? '$' : '₹'} ${parseFloat(selectedInvoice.due_amount).toLocaleString()}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="mt-4">
+            <h5>Installment Milestones</h5>
+            <table class="table table-sm table-striped">
+              <thead>
+                <tr>
+                  <th>Installment #</th>
+                  <th>Amount</th>
+                  <th>Due Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${selectedInvoice.installments?.map(inst => `
+                  <tr>
+                    <td>Installment #${inst.installment_number}</td>
+                    <td>${selectedInvoice.currency === 'USD' ? '$' : '₹'} ${parseFloat(inst.amount).toLocaleString()}</td>
+                    <td>${inst.due_date ? inst.due_date.split('T')[0] : ''}</td>
+                    <td>${inst.status}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="text-center text-muted small mt-5 pt-4 border-top">
+            Thank you for choosing CampusFlow! For queries, contact support@campusflow.com.
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
     setPayError('');
@@ -176,19 +279,25 @@ const Finance = () => {
               <div className="col-md-4">
                 <div className="cf-card text-center p-3">
                   <h6 className="text-muted text-uppercase fw-bold small mb-2">Total Net Fee</h6>
-                  <h2 className="fw-extrabold text-dark mb-0">${parseFloat(stmt.total_fees || 0).toLocaleString()}</h2>
+                  <h2 className="fw-extrabold text-dark mb-0">
+                    {studentStatement?.invoices?.[0]?.currency === 'USD' ? '$' : '₹'} {parseFloat(stmt.total_fees || 0).toLocaleString()}
+                  </h2>
                 </div>
               </div>
               <div className="col-md-4">
                 <div className="cf-card text-center p-3">
                   <h6 className="text-muted text-uppercase fw-bold small mb-2">Total Paid Fee</h6>
-                  <h2 className="fw-extrabold text-success mb-0">${parseFloat(stmt.paid_fees || 0).toLocaleString()}</h2>
+                  <h2 className="fw-extrabold text-success mb-0">
+                    {studentStatement?.invoices?.[0]?.currency === 'USD' ? '$' : '₹'} {parseFloat(stmt.paid_fees || 0).toLocaleString()}
+                  </h2>
                 </div>
               </div>
               <div className="col-md-4">
                 <div className="cf-card text-center p-3">
                   <h6 className="text-muted text-uppercase fw-bold small mb-2">Remaining Pending Fee</h6>
-                  <h2 className="fw-extrabold text-danger mb-0">${parseFloat(stmt.pending_fees || 0).toLocaleString()}</h2>
+                  <h2 className="fw-extrabold text-danger mb-0">
+                    {studentStatement?.invoices?.[0]?.currency === 'USD' ? '$' : '₹'} {parseFloat(stmt.pending_fees || 0).toLocaleString()}
+                  </h2>
                 </div>
               </div>
             </div>
@@ -213,7 +322,9 @@ const Finance = () => {
                       {studentStatement?.installments?.map(inst => (
                         <tr key={inst.id}>
                           <td className="fw-bold">Installment #{inst.installment_number}</td>
-                          <td className="fw-bold text-dark">${parseFloat(inst.amount).toLocaleString()}</td>
+                          <td className="fw-bold text-dark">
+                            {inst.currency === 'USD' ? '$' : '₹'} {parseFloat(inst.amount).toLocaleString()}
+                          </td>
                           <td className="small font-monospace">{inst.due_date ? inst.due_date.split('T')[0] : ''}</td>
                           <td>
                             <span className={`badge ${inst.status === 'PAID' ? 'bg-success' : 'bg-warning text-dark'} px-2.5 py-1 rounded-pill`}>
@@ -248,7 +359,9 @@ const Finance = () => {
                       studentStatement?.payments?.map(p => (
                         <tr key={p.id}>
                           <td className="py-3 px-3 fw-bold">{p.payment_date ? p.payment_date.split('T')[0] : ''}</td>
-                          <td className="py-3 px-3 fw-bold text-success">${parseFloat(p.amount).toLocaleString()}</td>
+                          <td className="py-3 px-3 fw-bold text-success">
+                            {p.currency === 'USD' ? '$' : '₹'} {parseFloat(p.amount).toLocaleString()}
+                          </td>
                           <td className="py-3 px-3"><span className="badge bg-info bg-opacity-10 text-info border border-info px-2.5 py-1">{p.payment_method}</span></td>
                           <td className="py-3 px-3 font-monospace small">{p.transaction_reference || 'N/A'}</td>
                         </tr>
@@ -274,9 +387,9 @@ const Finance = () => {
       )
     },
     { header: 'Course', accessor: 'course_name', render: (r) => <span className="fw-semibold text-dark">{r.course_name}</span> },
-    { header: 'Net Total Fee', accessor: 'net_amount', render: (r) => <span className="fw-bold text-dark">${parseFloat(r.net_amount || r.total_amount).toLocaleString()}</span> },
-    { header: 'Paid Amount', accessor: 'paid_amount', render: (r) => <span className="fw-bold text-success">${parseFloat(r.paid_amount || 0).toLocaleString()}</span> },
-    { header: 'Pending Due', accessor: 'due_amount', render: (r) => <span className="fw-bold text-danger">${parseFloat(r.due_amount || 0).toLocaleString()}</span> },
+    { header: 'Net Total Fee', accessor: 'net_amount', render: (r) => <span className="fw-bold text-dark">{r.currency === 'USD' ? '$' : '₹'} {parseFloat(r.net_amount || r.total_amount).toLocaleString()}</span> },
+    { header: 'Paid Amount', accessor: 'paid_amount', render: (r) => <span className="fw-bold text-success">{r.currency === 'USD' ? '$' : '₹'} {parseFloat(r.paid_amount || 0).toLocaleString()}</span> },
+    { header: 'Pending Due', accessor: 'due_amount', render: (r) => <span className="fw-bold text-danger">{r.currency === 'USD' ? '$' : '₹'} {parseFloat(r.due_amount || 0).toLocaleString()}</span> },
     { header: 'Due Date', accessor: 'due_date', render: (r) => <span className="small font-monospace">{r.due_date ? r.due_date.split('T')[0] : ''}</span> },
     { header: 'Status', accessor: 'status', render: (r) => renderStatusBadge(r.status) },
     { header: 'Actions', accessor: 'id', render: (r) => (
@@ -300,16 +413,16 @@ const Finance = () => {
       {/* Summary Cards */}
       <div className="row g-3 mb-4">
         <div className="col-md-3">
-          <DashboardCard title="Total Revenue" value={`$${parseFloat(summary.total_revenue || 0).toLocaleString()}`} icon="bi-currency-dollar" color="primary" subtitle="Gross tuition receivables" />
+          <DashboardCard title="Total Revenue" value={`₹${parseFloat(summary.INR?.total_revenue || 0).toLocaleString()} / $${parseFloat(summary.USD?.total_revenue || 0).toLocaleString()}`} icon="bi-currency-exchange" color="primary" subtitle="Gross tuition receivables" />
         </div>
         <div className="col-md-3">
-          <DashboardCard title="Total Collected" value={`$${parseFloat(summary.total_collected || 0).toLocaleString()}`} icon="bi-check-circle" color="success" subtitle="Fee payments collected" />
+          <DashboardCard title="Total Collected" value={`₹${parseFloat(summary.INR?.total_collected || 0).toLocaleString()} / $${parseFloat(summary.USD?.total_collected || 0).toLocaleString()}`} icon="bi-check-circle" color="success" subtitle="Fee payments collected" />
         </div>
         <div className="col-md-3">
-          <DashboardCard title="Total Pending" value={`$${parseFloat(summary.total_pending || 0).toLocaleString()}`} icon="bi-clock-history" color="warning" subtitle="Outstanding balance" />
+          <DashboardCard title="Total Pending" value={`₹${parseFloat(summary.INR?.total_pending || 0).toLocaleString()} / $${parseFloat(summary.USD?.total_pending || 0).toLocaleString()}`} icon="bi-clock-history" color="warning" subtitle="Outstanding balance" />
         </div>
         <div className="col-md-3">
-          <DashboardCard title="Overdue Amount" value={`$${parseFloat(summary.overdue_amount || 0).toLocaleString()}`} icon="bi-exclamation-triangle" color="danger" subtitle="Past due dates balance" />
+          <DashboardCard title="Overdue Amount" value={`₹${parseFloat(summary.INR?.overdue_amount || 0).toLocaleString()} / $${parseFloat(summary.USD?.overdue_amount || 0).toLocaleString()}`} icon="bi-exclamation-triangle" color="danger" subtitle="Past due dates balance" />
         </div>
       </div>
 
@@ -429,7 +542,6 @@ const Finance = () => {
                       value={payData.payment_method}
                       onChange={(e) => setPayData({ ...payData, payment_method: e.target.value })}
                     >
-                      <option value="COINS">🪙 Student Coins Wallet (1 Coin = ₹1)</option>
                       <option value="UPI">UPI Payment</option>
                       <option value="CASH">Cash</option>
                       <option value="BANK_TRANSFER">Bank Transfer / NetBanking</option>
@@ -492,19 +604,19 @@ const Finance = () => {
                   <div className="col-4">
                     <div className="p-3 bg-light rounded-3 border">
                       <div className="small text-muted text-uppercase fw-bold">Net Total Amount</div>
-                      <div className="fs-5 fw-bold text-dark mt-1">${parseFloat(selectedInvoice.net_amount || selectedInvoice.total_amount).toLocaleString()}</div>
+                      <div className="fs-5 fw-bold text-dark mt-1">{selectedInvoice.currency === 'USD' ? '$' : '₹'} {parseFloat(selectedInvoice.net_amount || selectedInvoice.total_amount).toLocaleString()}</div>
                     </div>
                   </div>
                   <div className="col-4">
                     <div className="p-3 bg-success bg-opacity-10 rounded-3 border border-success border-opacity-25">
                       <div className="small text-success text-uppercase fw-bold">Paid Collected</div>
-                      <div className="fs-5 fw-bold text-success mt-1">${parseFloat(selectedInvoice.paid_amount || 0).toLocaleString()}</div>
+                      <div className="fs-5 fw-bold text-success mt-1">{selectedInvoice.currency === 'USD' ? '$' : '₹'} {parseFloat(selectedInvoice.paid_amount || 0).toLocaleString()}</div>
                     </div>
                   </div>
                   <div className="col-4">
                     <div className="p-3 bg-danger bg-opacity-10 rounded-3 border border-danger border-opacity-25">
                       <div className="small text-danger text-uppercase fw-bold">Remaining Due</div>
-                      <div className="fs-5 fw-bold text-danger mt-1">${parseFloat(selectedInvoice.due_amount).toLocaleString()}</div>
+                      <div className="fs-5 fw-bold text-danger mt-1">{selectedInvoice.currency === 'USD' ? '$' : '₹'} {parseFloat(selectedInvoice.due_amount).toLocaleString()}</div>
                     </div>
                   </div>
                 </div>
@@ -545,7 +657,9 @@ const Finance = () => {
                           {selectedInvoice.payments.map(p => (
                             <tr key={p.id}>
                               <td className="small font-monospace">{p.payment_date ? p.payment_date.split('T')[0] : ''}</td>
-                              <td className="fw-bold text-success">${parseFloat(p.amount).toLocaleString()}</td>
+                              <td className="fw-bold text-success">
+                                {selectedInvoice.currency === 'USD' ? '$' : '₹'} {parseFloat(p.amount).toLocaleString()}
+                              </td>
                               <td><span className="badge bg-secondary bg-opacity-10 text-dark border px-2 py-0.5">{p.payment_method}</span></td>
                               <td className="small font-monospace">{p.transaction_reference || '-'}</td>
                               <td className="small text-muted">{p.received_by_name || 'Admin'}</td>
@@ -560,7 +674,10 @@ const Finance = () => {
                 </div>
               </div>
 
-              <div className="modal-footer border-top">
+              <div className="modal-footer border-top d-flex justify-content-between">
+                <button type="button" className="btn btn-warning text-dark fw-bold rounded-pill px-4" onClick={handlePrintInvoice}>
+                  <i className="bi bi-printer me-1"></i> Print / Download PDF
+                </button>
                 <button type="button" className="btn btn-secondary rounded-pill px-4" onClick={() => setShowDetailsModal(false)}>Close</button>
               </div>
             </div>

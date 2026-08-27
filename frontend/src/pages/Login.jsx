@@ -13,7 +13,7 @@ const DEMO_ROLES = [
 ];
 
 const FEATURES = [
-  { icon: '🎓', text: 'Course Enrollment with 10,000 Coin Wallet' },
+  { icon: '🎓', text: 'Course Enrollment & Admissions Management' },
   { icon: '📊', text: 'Real-time Attendance & Assignment Tracking' },
   { icon: '🗓️', text: 'Live Batch Timetable & Notification Alerts' },
   { icon: '📧', text: 'Automated Gmail SMTP Receipt & Class Updates' },
@@ -27,8 +27,6 @@ export default function Login() {
   const [capsLock, setCapsLock]   = useState(false);
   const [error, setError]         = useState('');
   const [loading, setLoading]     = useState(false);
-  const [tab, setTab]             = useState('login');
-
   // Dark Mode State
   const [darkMode, setDarkMode]   = useState(() => localStorage.getItem('cf_theme') === 'dark');
 
@@ -37,12 +35,6 @@ export default function Login() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotMsg, setForgotMsg]     = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
-
-  // Registration
-  const [reg, setReg]           = useState({ full_name: '', email: '', phone: '', password: '', qualification: '', guardian_name: '', guardian_phone: '' });
-  const [regMsg, setRegMsg]     = useState('');
-  const [regOk, setRegOk]       = useState(false);
-  const [regLoading, setRegLoading] = useState(false);
 
   const { login } = useAuth();
   const navigate  = useNavigate();
@@ -82,16 +74,7 @@ export default function Login() {
     finally { setForgotLoading(false); }
   };
 
-  const handleRegister = async (e) => {
-    e.preventDefault(); setRegLoading(true); setRegMsg(''); setRegOk(false);
-    try {
-      const res = await api.post('/auth/register-student', reg);
-      if (res.success) { setRegOk(true); setRegMsg(res.message || 'Registration submitted! Awaiting admin approval.'); }
-    } catch (err) { setRegMsg(typeof err === 'string' ? err : 'Registration failed. Check your details.'); }
-    finally { setRegLoading(false); }
-  };
-
-  const fillDemo = (demoEmail) => { setEmail(demoEmail); setPassword('password123'); setError(''); setTab('login'); };
+  const fillDemo = (demoEmail) => { setEmail(demoEmail); setPassword('password123'); setError(''); };
 
   // Dynamic Styles based on theme
   const pageBg = darkMode ? '#090e17' : '#f1f5f9';
@@ -230,215 +213,136 @@ export default function Login() {
           {/* Card */}
           <div style={{ background: cardBg, borderRadius: '20px', boxShadow: darkMode ? '0 10px 40px rgba(0,0,0,0.5)' : '0 4px 30px rgba(0,0,0,0.08)', padding: '2.2rem', border: `1px solid ${borderCol}`, transition: 'background-color 0.25s ease' }}>
 
-            {/* Tabs */}
-            <div style={{ display: 'flex', borderRadius: '10px', background: darkMode ? '#162235' : '#f1f5f9', padding: '4px', marginBottom: '1.8rem' }}>
-              {['login', 'register'].map(t => (
-                <button
-                  key={t}
-                  onClick={() => { setTab(t); setError(''); setRegMsg(''); }}
-                  style={{
-                    flex: 1,
-                    padding: '0.6rem',
-                    borderRadius: '7px',
-                    border: 'none',
-                    fontWeight: 700,
-                    fontSize: '0.87rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    background: tab === t ? (darkMode ? '#1f2d45' : '#fff') : 'transparent',
-                    color: tab === t ? '#f97316' : textMuted,
-                    boxShadow: tab === t ? '0 1px 6px rgba(0,0,0,0.1)' : 'none'
-                  }}
-                >
-                  {t === 'login' ? '🔑 Sign In' : '📝 Register'}
-                </button>
-              ))}
-            </div>
+            <div>
+              <h2 style={{ color: textPrimary, fontWeight: 900, fontSize: '1.5rem', margin: '0 0 0.25rem', letterSpacing: '-0.4px' }}>Welcome back 👋</h2>
+              <p style={{ color: textMuted, fontSize: '0.86rem', marginBottom: '1.5rem' }}>Sign in to your CampusFlow account</p>
 
-            {/* ─── TAB 1: LOGIN ─── */}
-            {tab === 'login' && (
-              <div>
-                <h2 style={{ color: textPrimary, fontWeight: 900, fontSize: '1.5rem', margin: '0 0 0.25rem', letterSpacing: '-0.4px' }}>Welcome back 👋</h2>
-                <p style={{ color: textMuted, fontSize: '0.86rem', marginBottom: '1.5rem' }}>Sign in to your CampusFlow account</p>
+              {error && (
+                <div style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: darkMode ? 'rgba(239,68,68,0.15)' : '#fef2f2', border: '1px solid #f87171', color: '#f87171', fontSize: '0.85rem', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  ⚠️ {error}
+                </div>
+              )}
+              {capsLock && (
+                <div style={{ padding: '0.6rem 1rem', borderRadius: '10px', background: darkMode ? 'rgba(245,158,11,0.15)' : '#fffbeb', border: '1px solid #fcd34d', color: darkMode ? '#fbbf24' : '#92400e', fontSize: '0.8rem', marginBottom: '1rem' }}>
+                  ⇪ Caps Lock is ON
+                </div>
+              )}
 
-                {error && (
-                  <div style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: darkMode ? 'rgba(239,68,68,0.15)' : '#fef2f2', border: '1px solid #f87171', color: '#f87171', fontSize: '0.85rem', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    ⚠️ {error}
-                  </div>
-                )}
-                {capsLock && (
-                  <div style={{ padding: '0.6rem 1rem', borderRadius: '10px', background: darkMode ? 'rgba(245,158,11,0.15)' : '#fffbeb', border: '1px solid #fcd34d', color: darkMode ? '#fbbf24' : '#92400e', fontSize: '0.8rem', marginBottom: '1rem' }}>
-                    ⇪ Caps Lock is ON
-                  </div>
-                )}
-
-                <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div>
-                    <label style={lbl}>Email Address</label>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={e => setEmail(e.target.value)}
-                        placeholder="user@campusflow.com"
-                        required
-                        style={{ ...inp, paddingRight: '2.6rem' }}
-                        onFocus={e => { e.target.style.borderColor = '#f97316'; e.target.style.boxShadow = '0 0 0 3px rgba(249,115,22,0.15)'; }}
-                        onBlur={e => { e.target.style.borderColor = darkMode ? '#293951' : '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
-                      />
-                      <span style={{ position: 'absolute', right: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: textMuted, fontSize: '0.95rem' }}>✉</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={lbl}>Password</label>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type={showPw ? 'text' : 'password'}
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        onKeyDown={e => setCapsLock(e.getModifierState?.('CapsLock'))}
-                        placeholder="••••••••••"
-                        required
-                        style={{ ...inp, paddingRight: '2.8rem' }}
-                        onFocus={e => { e.target.style.borderColor = '#f97316'; e.target.style.boxShadow = '0 0 0 3px rgba(249,115,22,0.15)'; }}
-                        onBlur={e => { e.target.style.borderColor = darkMode ? '#293951' : '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
-                      />
-                      <span onClick={() => setShowPw(!showPw)} style={{ position: 'absolute', right: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: textMuted, cursor: 'pointer', fontSize: '1rem', userSelect: 'none' }}>
-                        {showPw ? '🙈' : '👁'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} style={{ accentColor: '#f97316', width: '15px', height: '15px' }} />
-                      <span style={{ fontSize: '0.82rem', color: textMuted, fontWeight: 600 }}>Remember me</span>
-                    </label>
-                    <span onClick={() => { setForgotEmail(email); setForgotMsg(''); setForgotModal(true); }}
-                      style={{ fontSize: '0.82rem', color: '#f97316', fontWeight: 700, cursor: 'pointer' }}>
-                      Forgot Password?
-                    </span>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                      padding: '0.88rem',
-                      borderRadius: '11px',
-                      border: 'none',
-                      background: 'linear-gradient(135deg, #f97316, #f59e0b)',
-                      color: '#fff',
-                      fontWeight: 800,
-                      fontSize: '0.95rem',
-                      cursor: 'pointer',
-                      transition: 'opacity 0.2s, transform 0.15s',
-                      opacity: loading ? 0.75 : 1,
-                      marginTop: '0.2rem',
-                      boxShadow: '0 4px 14px rgba(249,115,22,0.35)',
-                      letterSpacing: '0.2px'
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-                  >
-                    {loading ? '⏳ Signing in...' : 'Sign In →'}
-                  </button>
-                </form>
-
-                {/* Quick Demo Access Roles */}
-                <div style={{ marginTop: '1.8rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1rem' }}>
-                    <div style={{ flex: 1, height: '1px', background: borderCol }} />
-                    <span style={{ fontSize: '0.72rem', color: textMuted, fontWeight: 800, whiteSpace: 'nowrap', letterSpacing: '0.06rem' }}>QUICK DEMO ACCESS</span>
-                    <div style={{ flex: 1, height: '1px', background: borderCol }} />
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.5rem' }}>
-                    {DEMO_ROLES.map(r => (
-                      <button
-                        key={r.email}
-                        onClick={() => fillDemo(r.email)}
-                        style={{
-                          padding: '0.55rem 0.3rem',
-                          borderRadius: '9px',
-                          border: `1.5px solid ${r.color}35`,
-                          background: darkMode ? r.bgDark : r.bgLight,
-                          color: r.color,
-                          fontWeight: 800,
-                          fontSize: '0.75rem',
-                          cursor: 'pointer',
-                          textAlign: 'center',
-                          transition: 'all 0.15s'
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = r.color; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 4px 12px ${r.color}30`; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = `${r.color}35`; e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}
-                      >
-                        {r.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{ textAlign: 'center', marginTop: '0.65rem', fontSize: '0.74rem', color: textMuted }}>
-                    Password for all: <strong style={{ color: textPrimary }}>password123</strong>
+              <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label style={lbl}>Email Address</label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      placeholder="user@campusflow.com"
+                      required
+                      style={{ ...inp, paddingRight: '2.6rem' }}
+                      onFocus={e => { e.target.style.borderColor = '#f97316'; e.target.style.boxShadow = '0 0 0 3px rgba(249,115,22,0.15)'; }}
+                      onBlur={e => { e.target.style.borderColor = darkMode ? '#293951' : '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
+                    />
+                    <span style={{ position: 'absolute', right: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: textMuted, fontSize: '0.95rem' }}>✉</span>
                   </div>
                 </div>
+
+                <div>
+                  <label style={lbl}>Password</label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showPw ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      onKeyDown={e => setCapsLock(e.getModifierState?.('CapsLock'))}
+                      placeholder="••••••••••"
+                      required
+                      style={{ ...inp, paddingRight: '2.8rem' }}
+                      onFocus={e => { e.target.style.borderColor = '#f97316'; e.target.style.boxShadow = '0 0 0 3px rgba(249,115,22,0.15)'; }}
+                      onBlur={e => { e.target.style.borderColor = darkMode ? '#293951' : '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
+                    />
+                    <span onClick={() => setShowPw(!showPw)} style={{ position: 'absolute', right: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: textMuted, cursor: 'pointer', fontSize: '1rem', userSelect: 'none' }}>
+                      {showPw ? '🙈' : '👁'}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} style={{ accentColor: '#f97316', width: '15px', height: '15px' }} />
+                    <span style={{ fontSize: '0.82rem', color: textMuted, fontWeight: 600 }}>Remember me</span>
+                  </label>
+                  <span onClick={() => { setForgotEmail(email); setForgotMsg(''); setForgotModal(true); }}
+                    style={{ fontSize: '0.82rem', color: '#f97316', fontWeight: 700, cursor: 'pointer' }}>
+                    Forgot Password?
+                  </span>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    padding: '0.88rem',
+                    borderRadius: '11px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #f97316, #f59e0b)',
+                    color: '#fff',
+                    fontWeight: 800,
+                    fontSize: '0.95rem',
+                    cursor: 'pointer',
+                    transition: 'opacity 0.2s, transform 0.15s',
+                    opacity: loading ? 0.75 : 1,
+                    marginTop: '0.2rem',
+                    boxShadow: '0 4px 14px rgba(249,115,22,0.35)',
+                    letterSpacing: '0.2px'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  {loading ? '⏳ Signing in...' : 'Sign In →'}
+                </button>
+              </form>
+
+              {/* Student Admissions Note */}
+              <div style={{ marginTop: '1.2rem', padding: '0.75rem 1rem', borderRadius: '10px', background: darkMode ? 'rgba(56,189,248,0.1)' : '#eff6ff', border: '1px solid rgba(56,189,248,0.25)', fontSize: '0.8rem', color: darkMode ? '#38bdf8' : '#1e40af' }}>
+                🎓 <strong>New Student Admission?</strong> Ask your Sales Executive for your unique admission link to apply.
               </div>
-            )}
 
-            {/* ─── TAB 2: REGISTER ─── */}
-            {tab === 'register' && (
-              <div>
-                <h2 style={{ color: textPrimary, fontWeight: 900, fontSize: '1.4rem', margin: '0 0 0.25rem', letterSpacing: '-0.4px' }}>Student Registration</h2>
-                <p style={{ color: textMuted, fontSize: '0.84rem', marginBottom: '1.2rem' }}>New students receive 10,000 welcome coins!</p>
-
-                {regMsg && (
-                  <div style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: regOk ? (darkMode ? 'rgba(52,211,153,0.15)' : '#f0fdf4') : (darkMode ? 'rgba(239,68,68,0.15)' : '#fef2f2'), border: `1px solid ${regOk ? '#34d399' : '#f87171'}`, color: regOk ? '#34d399' : '#f87171', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                    {regOk ? '🎉' : '⚠️'} {regMsg}
-                  </div>
-                )}
-
-                <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                  <div>
-                    <label style={lbl}>Full Name *</label>
-                    <input type="text" placeholder="John Doe" value={reg.full_name} onChange={e => setReg({ ...reg, full_name: e.target.value })} required style={inp} />
-                  </div>
-                  <div>
-                    <label style={lbl}>Email Address *</label>
-                    <input type="email" placeholder="john@example.com" value={reg.email} onChange={e => setReg({ ...reg, email: e.target.value })} required style={inp} />
-                  </div>
-                  <div>
-                    <label style={lbl}>Phone Number *</label>
-                    <input type="tel" placeholder="+91 98765 43210" value={reg.phone} onChange={e => setReg({ ...reg, phone: e.target.value })} required style={inp} />
-                  </div>
-                  <div>
-                    <label style={lbl}>Create Password *</label>
-                    <input type="password" placeholder="Minimum 6 characters" value={reg.password} onChange={e => setReg({ ...reg, password: e.target.value })} required style={inp} />
-                  </div>
-                  <div>
-                    <label style={lbl}>Highest Qualification</label>
-                    <input type="text" placeholder="B.E. Computer Science, BCA, etc." value={reg.qualification} onChange={e => setReg({ ...reg, qualification: e.target.value })} style={inp} />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={regLoading}
-                    style={{
-                      padding: '0.85rem',
-                      borderRadius: '11px',
-                      border: 'none',
-                      background: 'linear-gradient(135deg, #10b981, #059669)',
-                      color: '#fff',
-                      fontWeight: 800,
-                      fontSize: '0.92rem',
-                      cursor: 'pointer',
-                      marginTop: '0.4rem',
-                      boxShadow: '0 4px 14px rgba(16,185,129,0.35)'
-                    }}
-                  >
-                    {regLoading ? '⏳ Registering...' : 'Complete Registration 🎓'}
-                  </button>
-                </form>
+              {/* Quick Demo Access Roles */}
+              <div style={{ marginTop: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1rem' }}>
+                  <div style={{ flex: 1, height: '1px', background: borderCol }} />
+                  <span style={{ fontSize: '0.72rem', color: textMuted, fontWeight: 800, whiteSpace: 'nowrap', letterSpacing: '0.06rem' }}>QUICK DEMO ACCESS</span>
+                  <div style={{ flex: 1, height: '1px', background: borderCol }} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.5rem' }}>
+                  {DEMO_ROLES.map(r => (
+                    <button
+                      key={r.email}
+                      onClick={() => fillDemo(r.email)}
+                      style={{
+                        padding: '0.55rem 0.3rem',
+                        borderRadius: '9px',
+                        border: `1.5px solid ${r.color}35`,
+                        background: darkMode ? r.bgDark : r.bgLight,
+                        color: r.color,
+                        fontWeight: 800,
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        transition: 'all 0.15s'
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = r.color; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 4px 12px ${r.color}30`; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = `${r.color}35`; e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ textAlign: 'center', marginTop: '0.65rem', fontSize: '0.74rem', color: textMuted }}>
+                  Password for all: <strong style={{ color: textPrimary }}>password123</strong>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>

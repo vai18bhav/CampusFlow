@@ -9,10 +9,12 @@ const { notFoundHandler, errorHandler } = require('./middleware/errorMiddleware'
 // Route Imports
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
+const studentRoutes = require('./routes/studentRoutes');
 const courseRoutes = require('./routes/courseRoutes');
 const batchRoutes = require('./routes/batchRoutes');
 const leadRoutes = require('./routes/leadRoutes');
 const admissionRoutes = require('./routes/admissionRoutes');
+const admissionLinkRoutes = require('./routes/admissionLinkRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
 const assignmentRoutes = require('./routes/assignmentRoutes');
 const financeRoutes = require('./routes/financeRoutes');
@@ -25,7 +27,12 @@ const documentRoutes = require('./routes/documentRoutes');
 const placementRoutes = require('./routes/placementRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
 const enrollmentRoutes = require('./routes/enrollmentRoutes');
-const walletRoutes = require('./routes/walletRoutes');
+const couponRoutes = require('./routes/couponRoutes');
+const systemRoutes = require('./routes/systemRoutes');
+const auditRoutes = require('./routes/auditRoutes');
+const overrideRoutes = require('./routes/overrideRoutes');
+const exportRoutes = require('./routes/exportRoutes');
+const emailTemplateRoutes = require('./routes/emailTemplateRoutes');
 
 const app = express();
 
@@ -38,9 +45,7 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, server-to-server)
     if (!origin) return callback(null, true);
-    // Allow any vercel.app domain or localhost
     if (
       allowedOrigins.includes(origin) ||
       origin.endsWith('.vercel.app') ||
@@ -49,7 +54,7 @@ app.use(cors({
     ) {
       return callback(null, true);
     }
-    return callback(null, true); // Allow all for now — restrict after go-live
+    return callback(null, true);
   },
   credentials: true
 }));
@@ -67,17 +72,18 @@ app.get(['/health', '/api/health'], (req, res) => {
   });
 });
 
-const studentRoutes = require('./routes/studentRoutes');
+const studentDashboardRoutes = require('./routes/studentDashboardRoutes');
 
-// API Routes (Mounted under /api and root aliases for flexibility)
+// API Routes
 app.use(['/api/auth', '/auth'], authRoutes);
 app.use(['/api/users', '/users'], userRoutes);
-app.use(['/api/students', '/students'], userRoutes);
-app.use(['/api/student', '/student'], studentRoutes);
+app.use(['/api/students', '/students'], studentRoutes);
+app.use(['/api/student', '/student'], studentDashboardRoutes);
 app.use(['/api/courses', '/courses'], courseRoutes);
 app.use(['/api/batches', '/batches'], batchRoutes);
 app.use(['/api/leads', '/leads'], leadRoutes);
 app.use(['/api/admissions', '/admissions'], admissionRoutes);
+app.use(['/api/admission-links', '/admission-links'], admissionLinkRoutes);
 app.use(['/api/attendance', '/attendance'], attendanceRoutes);
 app.use(['/api/assignments', '/assignments'], assignmentRoutes);
 app.use(['/api/finance', '/finance'], financeRoutes);
@@ -92,10 +98,16 @@ app.use(['/api/documents', '/documents'], documentRoutes);
 app.use(['/api/placements', '/placements'], placementRoutes);
 app.use(['/api/certificates', '/certificates'], certificateRoutes);
 app.use(['/api/enrollments', '/enrollments'], enrollmentRoutes);
-app.use(['/api/wallet', '/wallet'], walletRoutes);
+app.use(['/api/coupons', '/coupons'], couponRoutes);
+app.use(['/api/config', '/config'], systemRoutes);
+app.use(['/api/audit-logs', '/audit-logs'], auditRoutes);
+app.use(['/api/permission-overrides', '/permission-overrides'], overrideRoutes);
+app.use(['/api/export', '/export'], exportRoutes);
+app.use(['/api/admin/email-templates', '/admin/email-templates'], emailTemplateRoutes);
 
 // Error Handling Middleware
 app.use(notFoundHandler);
 app.use(errorHandler);
 
 module.exports = app;
+

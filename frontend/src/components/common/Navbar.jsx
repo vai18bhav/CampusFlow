@@ -136,6 +136,11 @@ const Navbar = ({ onToggleSidebar }) => {
                   ))
                 )}
               </div>
+              <div className="border-top pt-2 mt-2 text-center">
+                <button className="btn btn-link btn-sm text-decoration-none fw-bold p-0 text-primary" onClick={() => { setShowNotifications(false); navigate('/notices'); }}>
+                  View All Notifications <i className="bi bi-arrow-right text-primary me-1"></i>
+                </button>
+              </div>
             </div>
           )}
         </div>

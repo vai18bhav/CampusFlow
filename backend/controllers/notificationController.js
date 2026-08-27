@@ -105,20 +105,46 @@ const { sendBroadcastNoticeEmail } = require('../utils/emailService');
 
 const broadcastNotice = async (req, res) => {
   try {
-    const { title, message, priority = 'GENERAL', target_group = 'ALL_STUDENTS' } = req.body;
+    const { title, message, priority = 'GENERAL', target_group = 'ALL_STUDENTS', user_ids = [], batch_ids = [] } = req.body;
 
     if (!title || !message) {
       return errorResponse(res, 400, 'Notice title and message content are required.');
     }
 
-    let userQuery = 'SELECT id, full_name, email FROM users WHERE status = "ACTIVE"';
-    if (target_group === 'ALL_STUDENTS') {
-      userQuery += ' AND role_id = 6';
+    let targetUsers = [];
+
+    if (Array.isArray(user_ids) && user_ids.length > 0) {
+      // Send to specific selected users
+      const [selectedUsers] = await pool.query(
+        'SELECT id, full_name, email FROM users WHERE id IN (?) AND status = "ACTIVE"',
+        [user_ids]
+      );
+      targetUsers = selectedUsers;
+    } else if (Array.isArray(batch_ids) && batch_ids.length > 0) {
+      // Send to students in selected batches
+      const [batchUsers] = await pool.query(
+        `SELECT DISTINCT u.id, u.full_name, u.email FROM users u
+         JOIN students s ON s.user_id = u.id
+         JOIN batch_students bs ON bs.student_id = s.id
+         WHERE bs.batch_id IN (?) AND u.status = "ACTIVE"`,
+        [batch_ids]
+      );
+      targetUsers = batchUsers;
+    } else {
+      // Group target selection
+      let userQuery = 'SELECT id, full_name, email FROM users WHERE status = "ACTIVE"';
+      if (target_group === 'ALL_STUDENTS') {
+        userQuery += ' AND role_id = 6';
+      } else if (target_group === 'ALL_TRAINERS') {
+        userQuery += ' AND role_id = 4';
+      } else if (target_group === 'ALL_STAFF') {
+        userQuery += ' AND role_id IN (2, 3, 4, 5)';
+      }
+
+      const [users] = await pool.query(userQuery);
+      targetUsers = users;
     }
 
-    let [targetUsers] = await pool.query(userQuery);
-
-    // Fallback if no students registered yet: send notice to active system users
     if (targetUsers.length === 0) {
       const [allUsers] = await pool.query('SELECT id, full_name, email FROM users WHERE status = "ACTIVE"');
       targetUsers = allUsers;
@@ -130,7 +156,7 @@ const broadcastNotice = async (req, res) => {
 
     const senderName = req.user?.full_name || 'System Administration';
 
-    // 1. Insert in-app notifications & 2. Dispatch Gmail emails
+    // 1. Insert in-app notifications & 2. Dispatch email notifications
     for (let u of targetUsers) {
       await pool.query(
         'INSERT INTO notifications (user_id, title, message, type, is_read) VALUES (?, ?, ?, ?, 0)',

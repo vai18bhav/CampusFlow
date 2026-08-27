@@ -577,19 +577,25 @@ const Admissions = () => {
                   <div className="col-4">
                     <div className="p-3 bg-light rounded-3 border">
                       <div className="small text-muted text-uppercase fw-bold">Course Tuition</div>
-                      <div className="fs-5 fw-bold text-dark mt-1">${parseFloat(selectedAdmissionDetails.total_fee).toLocaleString()}</div>
+                      <div className="fs-5 fw-bold text-dark mt-1">
+                        {selectedAdmissionDetails.currency === 'USD' ? '$' : '₹'} {parseFloat(selectedAdmissionDetails.total_fee).toLocaleString()}
+                      </div>
                     </div>
                   </div>
                   <div className="col-4">
                     <div className="p-3 bg-warning bg-opacity-10 rounded-3 border border-warning border-opacity-25">
                       <div className="small text-warning text-uppercase fw-bold">Scholarship Discount</div>
-                      <div className="fs-5 fw-bold text-warning mt-1">${parseFloat(selectedAdmissionDetails.discount_amount || 0).toLocaleString()}</div>
+                      <div className="fs-5 fw-bold text-warning mt-1 font-monospace">
+                        {selectedAdmissionDetails.currency === 'USD' ? '$' : '₹'} {parseFloat(selectedAdmissionDetails.discount_amount || 0).toLocaleString()}
+                      </div>
                     </div>
                   </div>
                   <div className="col-4">
                     <div className="p-3 bg-success bg-opacity-10 rounded-3 border border-success border-opacity-25">
                       <div className="small text-success text-uppercase fw-bold">Final Payable Fee</div>
-                      <div className="fs-5 fw-bold text-success mt-1">${parseFloat(selectedAdmissionDetails.final_fee).toLocaleString()}</div>
+                      <div className="fs-5 fw-bold text-success mt-1">
+                        {selectedAdmissionDetails.currency === 'USD' ? '$' : '₹'} {parseFloat(selectedAdmissionDetails.final_fee).toLocaleString()}
+                      </div>
                     </div>
                   </div>
                 </div>

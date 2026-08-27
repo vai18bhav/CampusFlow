@@ -30,3 +30,6 @@ Thumbs.db
 # Vite & System cache
 .vite/
 .system_generated/
+
+# Uploads
+backend/uploads/

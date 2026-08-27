@@ -4,20 +4,25 @@ import api from '../services/api';
 const STATUS_CONFIG = {
   PENDING:  { color: '#f59e0b', bg: '#fef3c7', icon: '⏳', label: 'Pending Approval' },
   APPROVED: { color: '#10b981', bg: '#d1fae5', icon: '✅', label: 'Approved & Enrolled' },
-  REJECTED: { color: '#ef4444', bg: '#fee2e2', icon: '❌', label: 'Rejected' }
+  REJECTED: { color: '#ef4444', bg: '#fee2e2', icon: '❌', label: 'Rejected' },
+  Sent: { color: '#6b7280', bg: '#f3f4f6', icon: '✉️', label: 'Sent' },
+  Opened: { color: '#3b82f6', bg: '#dbeafe', icon: '📖', label: 'Opened' },
+  'In Progress': { color: '#8b5cf6', bg: '#f3e8ff', icon: '✍️', label: 'In Progress' },
+  Submitted: { color: '#f59e0b', bg: '#fef3c7', icon: '⏳', label: 'Submitted' },
+  Approved: { color: '#10b981', bg: '#d1fae5', icon: '✅', label: 'Approved' },
+  Rejected: { color: '#ef4444', bg: '#fee2e2', icon: '❌', label: 'Rejected' }
 };
 
 const PAYMENT_PLANS = [
-  { id: 'FULL', label: '💳 Full Payment (100% Upfront)', split: [1.0], desc: 'Deduct full course fee on approval. Zero pending balance.' },
-  { id: '2_INSTALLMENTS', label: '📦 2 Installments (50% + 50%)', split: [0.5, 0.5], desc: '50% deducted upfront on approval, 50% due in 30 days.' },
-  { id: '3_INSTALLMENTS', label: '📦 3 Installments (40% + 30% + 30%)', split: [0.4, 0.3, 0.3], desc: '40% deducted upfront, 30% in 30 days, 30% in 60 days.' },
-  { id: '4_INSTALLMENTS', label: '📦 4 Installments (25% × 4)', split: [0.25, 0.25, 0.25, 0.25], desc: '25% deducted upfront, remaining split across 3 months.' },
+  { id: 'FULL', label: '💳 Full Payment (100% Upfront)', split: [1.0], desc: 'Pay full course fee on approval. Zero pending balance.' },
+  { id: '2_INSTALLMENTS', label: '📦 2 Installments (50% + 50%)', split: [0.5, 0.5], desc: '50% payable upfront on approval, 50% due in 30 days.' },
+  { id: '3_INSTALLMENTS', label: '📦 3 Installments (40% + 30% + 30%)', split: [0.4, 0.3, 0.3], desc: '40% payable upfront, 30% in 30 days, 30% in 60 days.' },
+  { id: '4_INSTALLMENTS', label: '📦 4 Installments (25% × 4)', split: [0.25, 0.25, 0.25, 0.25], desc: '25% payable upfront, remaining split across 3 months.' },
 ];
 
 export default function CourseEnroll() {
   const [courses, setCourses] = useState([]);
   const [myRequests, setMyRequests] = useState([]);
-  const [wallet, setWallet] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(null);
   const [toast, setToast] = useState(null);
@@ -31,25 +36,59 @@ export default function CourseEnroll() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [cRes, rRes, wRes] = await Promise.all([
+      const [cRes, rRes] = await Promise.all([
         api.get('/courses'),
-        api.get('/enrollments'),
-        api.get('/wallet/my').catch(() => ({ data: { wallet: null } }))
+        api.get('/enrollments')
       ]);
       setCourses(cRes.data?.courses || []);
       setMyRequests(rRes.data?.requests || []);
-      setWallet(wRes.data?.wallet || null);
     } catch (e) {}
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    const loadAndCheckQuery = async () => {
+      await fetchData();
+      const params = new URLSearchParams(window.location.search);
+      const reqId = params.get('request_id');
+      if (reqId) {
+        try {
+          const reqRes = await api.get('/enrollments');
+          const matched = reqRes.data?.requests?.find(r => String(r.id) === String(reqId));
+          if (matched && (matched.status === 'Sent' || matched.status === 'Opened' || matched.status === 'In Progress')) {
+            if (matched.status === 'Sent') {
+              await api.patch(`/enrollments/${reqId}/status`, { status: 'Opened' });
+            }
+            const courseRes = await api.get('/courses');
+            const matchedCourse = courseRes.data?.courses?.find(c => c.id === matched.course_id);
+            if (matchedCourse) {
+              handleOpenEnrollModal(matchedCourse);
+              setSelectedCurrency(matched.currency || 'INR');
+              // Mark request in progress
+              api.patch(`/enrollments/${reqId}/status`, { status: 'In Progress' }).catch(() => {});
+            }
+          }
+        } catch (err) {
+          console.error('Failed to parse admission link parameters', err);
+        }
+      }
+    };
+    loadAndCheckQuery();
+  }, []);
 
   const getRequestStatus = (courseId) => myRequests.find(r => r.course_id === courseId);
-  const coinBalance = wallet?.coins_balance ?? 0;
 
-  const calculateMilestones = (courseFee, planId) => {
-    const fee = Math.round(parseFloat(courseFee || 0));
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponError, setCouponError] = useState(null);
+  const [verifyingCoupon, setVerifyingCoupon] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState('INR');
+
+  const calculateMilestones = (courseFee, planId, coupon) => {
+    let fee = Math.round(parseFloat(courseFee || 0));
+    if (coupon && coupon.discount_amount) {
+      fee = Math.max(0, fee - coupon.discount_amount);
+    }
     const plan = PAYMENT_PLANS.find(p => p.id === planId) || PAYMENT_PLANS[0];
     const upfront = Math.round(fee * plan.split[0]);
     return {
@@ -64,33 +103,70 @@ export default function CourseEnroll() {
     setShowModal(course);
     setSelectedPlan('FULL');
     setMessage('');
+    setCouponCode('');
+    setAppliedCoupon(null);
+    setCouponError(null);
+    setSelectedCurrency('INR');
+  };
+
+  const handleVerifyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setVerifyingCoupon(true);
+    setCouponError(null);
+    try {
+      const originalFee = Math.round(parseFloat(showModal.fee_amount || 0));
+      const res = await api.post('/coupons/validate', {
+        code: couponCode,
+        amount: originalFee,
+        currency: selectedCurrency
+      });
+      setAppliedCoupon(res.data?.data || null);
+      showToast('✅ Coupon applied successfully!');
+    } catch (err) {
+      setAppliedCoupon(null);
+      setCouponError(err.response?.data?.message || err.message || 'Invalid coupon');
+      showToast('❌ Coupon verification failed.', 'error');
+    }
+    setVerifyingCoupon(false);
   };
 
   const handleEnrollSubmit = async (e) => {
     e.preventDefault();
     if (!showModal) return;
 
-    const { upfront, installmentsCount } = calculateMilestones(showModal.fee_amount, selectedPlan);
-
-    if (upfront > coinBalance) {
-      showToast(`❌ Insufficient coins! You need at least ${upfront} 🪙 for the 1st installment, but you have ${coinBalance} 🪙.`, 'error');
-      return;
-    }
+    const { upfront, installmentsCount } = calculateMilestones(showModal.fee_amount, selectedPlan, appliedCoupon);
 
     setSubmitting(showModal.id);
     try {
-      await api.post('/enrollments', {
-        course_id: showModal.id,
-        message,
-        payment_plan: selectedPlan,
-        installments_count: installmentsCount
-      });
-      showToast(`✅ Enrollment request sent with ${installmentsCount === 1 ? 'Full Payment' : `${installmentsCount} Installments`}! Admin will review and deduct ${upfront} 🪙 upfront on approval.`);
+      const params = new URLSearchParams(window.location.search);
+      const reqId = params.get('request_id');
+
+      if (reqId) {
+        await api.patch(`/enrollments/${reqId}/status`, {
+          status: 'Submitted',
+          payment_plan: selectedPlan,
+          installments_count: installmentsCount,
+          coupon_code: appliedCoupon ? appliedCoupon.code : null,
+          currency: selectedCurrency,
+          message: message
+        });
+      } else {
+        await api.post('/enrollments', {
+          course_id: showModal.id,
+          message,
+          payment_plan: selectedPlan,
+          installments_count: installmentsCount,
+          coupon_code: appliedCoupon ? appliedCoupon.code : null,
+          currency: selectedCurrency,
+          status: 'Submitted'
+        });
+      }
+      showToast(`✅ Enrollment request submitted successfully! Admissions will review and process your request.`);
       setShowModal(null);
       setMessage('');
       fetchData();
     } catch (err) {
-      showToast(err || 'Failed to submit request', 'error');
+      showToast(err.response?.data?.message || err.message || 'Failed to submit request', 'error');
     }
     setSubmitting(null);
   };
@@ -109,7 +185,7 @@ export default function CourseEnroll() {
         </div>
       )}
 
-      {/* Header with Coin Wallet Banner */}
+      {/* Header */}
       <div className="cf-hero-welcome d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div className="cf-hero-welcome-shapes">
           <div className="cf-shape-dot cf-shape-dot-1"></div>
@@ -119,22 +195,13 @@ export default function CourseEnroll() {
         <div className="position-relative z-1">
           <div className="d-flex align-items-center gap-2 mb-2">
             <span className="badge bg-warning bg-opacity-20 text-warning border border-warning border-opacity-30 px-3 py-1 rounded-pill">
-              🪙 FLEXIBLE INSTALLMENT ENROLLMENT
+              📚 FLEXIBLE INSTALLMENT ENROLLMENT
             </span>
           </div>
           <h3 className="fw-extrabold text-white mb-1">Course Catalog & Admission Hub</h3>
           <p className="text-white-50 mb-0" style={{ maxWidth: '600px' }}>
-            Choose your specialization, select full payment or a flexible 2/3/4 installment plan, and enroll using your CampusFlow Coin Wallet.
+            Choose your specialization, select full payment or a flexible 2/3/4 installment plan, and submit your enrollment application directly.
           </p>
-        </div>
-
-        {/* Student Wallet Coin Balance */}
-        <div className="d-flex align-items-center gap-3 bg-white bg-opacity-10 border border-white border-opacity-20 rounded-4 px-4 py-2.5 position-relative z-1">
-          <span style={{ fontSize: '2.2rem' }}>🪙</span>
-          <div>
-            <div className="fw-extrabold text-warning fs-4 lh-1">{coinBalance.toLocaleString('en-IN')}</div>
-            <div className="text-white-50 small fw-bold mt-0.5">Available Coins</div>
-          </div>
         </div>
       </div>
 
@@ -184,81 +251,60 @@ export default function CourseEnroll() {
         <div style={{ minWidth: '260px' }}>
           <input
             type="text"
-            placeholder="🔍 Search course name, code, category..."
+            className="form-control rounded-pill"
+            placeholder="🔍 Search courses by name, category, or code..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="form-control fw-semibold"
           />
         </div>
       </div>
 
-      {/* Courses Grid */}
+      {/* Course Grid */}
       {loading ? (
-        <div className="cf-card text-center py-5">
-          <div className="spinner-border text-primary mb-3" role="status"></div>
-          <div className="text-muted fw-semibold">Loading available course catalog...</div>
+        <div className="text-center py-5">
+          <div className="spinner-border text-warning" role="status"></div>
+          <div className="mt-2 text-muted fw-semibold">Loading courses database...</div>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="cf-card text-center py-5">
-          <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>📚</div>
-          <h4 className="fw-bold mb-2">No Courses Found</h4>
-          <p className="text-muted">Try adjusting your search criteria or check back later.</p>
-        </div>
+        <div className="cf-card text-center py-5 text-muted">No courses matched your query.</div>
       ) : (
-        <div className="row g-4">
-          {filtered.map(course => {
-            const req = getRequestStatus(course.id);
-            const fee = Math.round(parseFloat(course.fee_amount || 0));
-            const hasSufficientCoins = coinBalance >= fee || coinBalance >= Math.round(fee * 0.25);
-
+        <div className="row g-3">
+          {filtered.map(c => {
+            const req = getRequestStatus(c.id);
             return (
-              <div key={course.id} className="col-12 col-md-6 col-xl-4">
-                <div className="cf-card h-100 p-0 overflow-hidden shadow-sm d-flex flex-column">
-                  {/* Card Header Top */}
-                  <div style={{ padding: '1.25rem', background: 'linear-gradient(135deg, rgba(249,115,22,0.08), rgba(139,92,246,0.08))', borderBottom: '1px solid var(--cf-border, #e2e8f0)' }}>
-                    <div className="d-flex justify-content-between align-items-start mb-2">
-                      <span className="badge bg-primary bg-opacity-15 text-primary border border-primary border-opacity-25 px-2.5 py-1 rounded-pill small fw-bold">
-                        {course.category || 'Professional'}
-                      </span>
-                      <span className="badge bg-warning bg-opacity-20 text-dark border border-warning border-opacity-30 px-3 py-1 rounded-pill fw-bold">
-                        🪙 {fee.toLocaleString('en-IN')} Coins
-                      </span>
-                    </div>
-                    <h5 className="fw-extrabold mb-1" style={{ color: 'var(--cf-text-main)' }}>{course.name}</h5>
-                    <span className="small text-muted font-monospace">{course.code} • {course.duration_weeks || 12} Weeks</span>
+              <div key={c.id} className="col-md-6 col-lg-4">
+                <div className="cf-card h-100 d-flex flex-column p-4 transition-card shadow-sm border">
+                  <div className="d-flex justify-content-between align-items-start mb-2">
+                    <span className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1 text-uppercase font-monospace small">
+                      {c.code || 'CRS'}
+                    </span>
+                    <span className="badge bg-secondary bg-opacity-10 text-dark border font-monospace px-2.5 py-1 small">
+                      {c.duration_weeks || 12} Weeks
+                    </span>
                   </div>
 
-                  {/* Course Details */}
-                  <div className="p-3.5 flex-grow-1 d-flex flex-column justify-content-between">
-                    <p className="text-muted small mb-3" style={{ lineHeight: 1.6 }}>
-                      {course.description || 'Comprehensive industry-aligned curriculum with live coding labs, weekly assignments, and mock interview preparations.'}
-                    </p>
+                  <h5 className="fw-extrabold text-dark mb-2 text-truncate-2" style={{ fontSize: '1.05rem', lineHeight: 1.3 }}>{c.name}</h5>
+                  <p className="text-muted small mb-3 flex-grow-1 text-truncate-3" style={{ fontSize: '0.82rem', lineHeight: 1.4 }}>
+                    {c.description || 'Comprehensive specialization course focused on industry readiness, hands-on lab sessions, and capstone project assignments.'}
+                  </p>
 
-                    {/* Installment Badge Helper */}
-                    <div className="p-2.5 rounded-3 mb-3" style={{ background: 'var(--cf-input-bg, #f8fafc)', border: '1px dashed var(--cf-border, #cbd5e1)' }}>
-                      <div className="small fw-bold text-success d-flex align-items-center gap-1">
-                        <i className="bi bi-check-circle-fill"></i> Installment Plans Available
-                      </div>
-                      <div className="small text-muted mt-0.5" style={{ fontSize: '0.78rem' }}>
-                        Pay full or split into 2, 3, or 4 milestones (as low as <strong>{Math.round(fee * 0.25)} 🪙/mo</strong>)
-                      </div>
-                    </div>
-
-                    {/* Action Button */}
+                  <div className="d-flex justify-content-between align-items-center pt-3 border-top mt-auto">
                     <div>
-                      {req ? (
-                        <div className="p-2.5 rounded-3 text-center" style={{ background: STATUS_CONFIG[req.status]?.bg, color: STATUS_CONFIG[req.status]?.color }}>
-                          <span className="fw-bold small">{STATUS_CONFIG[req.status]?.icon} {STATUS_CONFIG[req.status]?.label}</span>
-                        </div>
-                      ) : (
-                        <button
-                          className="btn btn-primary w-100 rounded-pill fw-bold py-2 shadow-sm"
-                          onClick={() => handleOpenEnrollModal(course)}
-                        >
-                          🚀 Enroll with Coins / Installments
-                        </button>
-                      )}
+                      <div className="text-muted small font-monospace lh-1">TUITION FEE</div>
+                      <div className="fw-extrabold text-dark mt-1" style={{ fontSize: '1.25rem' }}>
+                        ₹ {parseFloat(c.fee_amount || 0).toLocaleString()}
+                      </div>
                     </div>
+
+                    {req ? (
+                      <span className="badge px-3 py-2 rounded-pill fw-bold" style={{ background: (STATUS_CONFIG[req.status] || STATUS_CONFIG.PENDING).bg, color: (STATUS_CONFIG[req.status] || STATUS_CONFIG.PENDING).color }}>
+                        {(STATUS_CONFIG[req.status] || STATUS_CONFIG.PENDING).icon} {(STATUS_CONFIG[req.status] || STATUS_CONFIG.PENDING).label}
+                      </span>
+                    ) : (
+                      <button className="btn btn-warning text-dark fw-bold rounded-pill px-4" onClick={() => handleOpenEnrollModal(c)}>
+                        Apply Now 🚀
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -280,16 +326,71 @@ export default function CourseEnroll() {
             </div>
 
             <form onSubmit={handleEnrollSubmit} className="d-flex flex-column gap-3">
-              {/* Fee & Wallet Breakdown */}
+              {/* Currency & Coupon Fields */}
+              <div className="row g-2">
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-muted text-uppercase">Currency *</label>
+                  <select
+                    className="form-select"
+                    value={selectedCurrency}
+                    onChange={(e) => {
+                      setSelectedCurrency(e.target.value);
+                      setAppliedCoupon(null);
+                      setCouponCode('');
+                      setCouponError(null);
+                    }}
+                  >
+                    <option value="INR">INR (₹)</option>
+                    <option value="USD">USD ($)</option>
+                  </select>
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-bold text-muted text-uppercase">Coupon Code</label>
+                  <div className="input-group">
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="e.g. SAVE20"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline-warning"
+                      onClick={handleVerifyCoupon}
+                      disabled={verifyingCoupon || !couponCode}
+                    >
+                      {verifyingCoupon ? '...' : 'Apply'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {couponError && <div className="text-danger small mt-0.5">❌ {couponError}</div>}
+              {appliedCoupon && (
+                <div className="text-success small mt-0.5 fw-bold">
+                  ✅ Coupon applied! Discount: {selectedCurrency === 'INR' ? '₹' : '$'}{appliedCoupon.discount_amount}
+                </div>
+              )}
+
+              {/* Fee Breakdown */}
               <div className="p-3 rounded-3" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.1), rgba(139,92,246,0.1))', border: '1.5px solid rgba(249,115,22,0.2)' }}>
-                <div className="d-flex justify-content-between align-items-center mb-1.5">
-                  <span className="text-muted small fw-bold">Total Course Fee:</span>
-                  <strong className="text-warning fs-5">🪙 {Math.round(parseFloat(showModal.fee_amount || 0)).toLocaleString('en-IN')} Coins</strong>
-                </div>
                 <div className="d-flex justify-content-between align-items-center">
-                  <span className="text-muted small fw-bold">Your Wallet Balance:</span>
-                  <strong className="text-success fs-6">🪙 {coinBalance.toLocaleString('en-IN')} Coins</strong>
+                  <span className="text-muted small fw-bold">Total Course Fee:</span>
+                  <strong className="text-warning fs-5">
+                    {selectedCurrency === 'INR' ? '₹' : '$'} {Math.round(parseFloat(showModal.fee_amount || 0)).toLocaleString('en-IN')}
+                    {appliedCoupon && (
+                      <span className="text-muted small fw-normal ms-1.5" style={{ textDecoration: 'line-through' }}>
+                        {selectedCurrency === 'INR' ? '₹' : '$'}{Math.round(parseFloat(showModal.fee_amount || 0))}
+                      </span>
+                    )}
+                  </strong>
                 </div>
+                {appliedCoupon && (
+                  <div className="d-flex justify-content-between align-items-center mt-1.5">
+                    <span className="text-muted small fw-bold">Discount Applied:</span>
+                    <strong className="text-danger fs-6">- {selectedCurrency === 'INR' ? '₹' : '$'} {appliedCoupon.discount_amount}</strong>
+                  </div>
+                )}
               </div>
 
               {/* Installment Plan Radio Selection */}
@@ -299,9 +400,8 @@ export default function CourseEnroll() {
                 </label>
                 <div className="d-flex flex-column gap-2">
                   {PAYMENT_PLANS.map(plan => {
-                    const { upfront, remaining, installmentsCount } = calculateMilestones(showModal.fee_amount, plan.id);
+                    const { upfront, remaining, installmentsCount } = calculateMilestones(showModal.fee_amount, plan.id, appliedCoupon);
                     const isSelected = selectedPlan === plan.id;
-                    const canAffordUpfront = coinBalance >= upfront;
 
                     return (
                       <label
@@ -329,8 +429,8 @@ export default function CourseEnroll() {
                         <div className="flex-grow-1">
                           <div className="d-flex justify-content-between align-items-center">
                             <strong style={{ color: 'var(--cf-text-main)', fontSize: '0.92rem' }}>{plan.label}</strong>
-                            <span className={`badge ${canAffordUpfront ? 'bg-success' : 'bg-danger'} rounded-pill small`}>
-                              Upfront: {upfront} 🪙
+                            <span className="badge bg-success rounded-pill small">
+                              Upfront: {selectedCurrency === 'INR' ? '₹' : '$'}{upfront.toLocaleString()}
                             </span>
                           </div>
                           <p className="text-muted small mb-0 mt-1" style={{ fontSize: '0.8rem', lineHeight: 1.4 }}>
@@ -338,7 +438,7 @@ export default function CourseEnroll() {
                           </p>
                           {remaining > 0 && (
                             <div className="text-primary small fw-bold mt-1" style={{ fontSize: '0.78rem' }}>
-                              🗓️ Remaining {remaining} 🪙 split across {installmentsCount - 1} upcoming milestone(s).
+                              🗓️ Remaining {selectedCurrency === 'INR' ? '₹' : '$'}{remaining.toLocaleString()} split across {installmentsCount - 1} upcoming milestone(s).
                             </div>
                           )}
                         </div>

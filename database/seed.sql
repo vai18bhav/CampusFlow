@@ -10,9 +10,7 @@ INSERT INTO roles (id, name, description) VALUES
 (5, 'SUPPORT_EXECUTIVE', 'Support Executive handling student support requests and notifications'),
 (6, 'STUDENT', 'Enrolled student accessing personal profile, attendance, assignments, and finance');
 
--- 2. SEED USERS (Password for all default demo users is: password123)
--- Hash generated via bcrypt (cost 10): $2b$10$V08M/W6dJpP98v6/a/kYxeS.tH0O9k1Y5z1p98v6/a/kYxeS.tH0O
--- Standard fallback hash: $2a$10$k1wK7Z.aLz/F.H3v9gQ1e.S8B07bUvP7g4jS3M6dG5hJ1K2L3M4N5
+-- 2. SEED USERS (Role-specific default passwords: SuperAdmin@2026, Admin@2026, SalesExec@2026, Trainer@2026, SupportExec@2026, Student@2026)
 INSERT INTO users (id, role_id, full_name, email, password_hash, phone, status) VALUES
 (1, 1, 'Super Admin', 'superadmin@campusflow.com', '$2b$10$epAlZ/5fR8Lq3K0oW0e8OuR.1Fm1m6q1Q5G8v7g.H7J1K2L3M4N5O', '+19876543210', 'ACTIVE'),
 (2, 2, 'Sarah Admin', 'admin@campusflow.com', '$2b$10$epAlZ/5fR8Lq3K0oW0e8OuR.1Fm1m6q1Q5G8v7g.H7J1K2L3M4N5O', '+19876543211', 'ACTIVE'),

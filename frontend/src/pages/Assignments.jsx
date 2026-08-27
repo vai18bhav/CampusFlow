@@ -149,6 +149,36 @@ const Assignments = () => {
     }
   };
 
+  const handleToggleCompletion = async (assignmentId) => {
+    try {
+      const res = await api.patch(`/assignments/${assignmentId}/toggle-completion`);
+      if (res.success) {
+        fetchInitialData();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Failed to toggle completion');
+    }
+  };
+
+  const handleMarkStatus = async (assignmentId, studentId, currentStatus) => {
+    try {
+      const targetStatus = currentStatus === 'SUBMITTED' || currentStatus === 'LATE' || currentStatus === 'REVIEWED' ? 'PENDING' : 'SUBMITTED';
+      const res = await api.post(`/assignments/${assignmentId}/mark-status`, {
+        student_id: studentId,
+        status: targetStatus
+      });
+      if (res.success) {
+        // Refresh submissions modal
+        const freshRes = await api.get(`/assignments/${assignmentId}/submissions`);
+        if (freshRes.success) {
+          setSubmissionsList(freshRes.data.submissions);
+        }
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Failed to mark status');
+    }
+  };
+
   // Calculate Stat Metrics
   const totalCount = assignments.length;
   const publishedCount = assignments.filter(a => a.status === 'PUBLISHED').length;
@@ -195,20 +225,29 @@ const Assignments = () => {
     },
     { header: 'Actions', accessor: 'id', render: (r) => (
         role === 'STUDENT' ? (
-          r.my_submission ? (
-            <div className="small text-muted">
-              {r.my_submission.feedback && <span className="d-block text-success fw-semibold">Feedback: {r.my_submission.feedback}</span>}
-              {r.my_submission.file_url && (
-                <a href={r.my_submission.file_url} target="_blank" rel="noreferrer" className="small text-danger text-decoration-none d-block mt-0.5">
-                  <i className="bi bi-file-earmark-pdf me-1"></i> Submitted PDF
-                </a>
-              )}
-            </div>
-          ) : (
-            <button className="btn btn-sm btn-primary rounded-pill px-3 fw-semibold shadow-sm" onClick={() => { setSelectedAssignment(r); setShowSubmitModal(true); }}>
-              <i className="bi bi-upload me-1"></i> Submit Work
+          <div className="d-flex flex-column gap-1.5">
+            <button
+              className={`btn btn-sm rounded-pill px-3 fw-bold shadow-sm ${r.my_submission ? 'btn-outline-danger' : 'btn-warning text-dark'}`}
+              onClick={() => handleToggleCompletion(r.id)}
+            >
+              {r.my_submission ? '✕ Mark Incomplete' : '✓ Mark Complete'}
             </button>
-          )
+            {!r.my_submission && (
+              <button className="btn btn-sm btn-primary rounded-pill px-3 fw-semibold shadow-sm" onClick={() => { setSelectedAssignment(r); setShowSubmitModal(true); }}>
+                <i className="bi bi-upload me-1"></i> Submit Work
+              </button>
+            )}
+            {r.my_submission && (
+              <div className="small text-muted mt-1">
+                {r.my_submission.feedback && <span className="d-block text-success fw-semibold">Feedback: {r.my_submission.feedback}</span>}
+                {r.my_submission.file_url && (
+                  <a href={r.my_submission.file_url} target="_blank" rel="noreferrer" className="small text-danger text-decoration-none d-block">
+                    <i className="bi bi-file-earmark-pdf me-1"></i> Submitted PDF
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
         ) : (
           <button className="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold shadow-sm" onClick={() => handleViewSubmissions(r)}>
             <i className="bi bi-eye-fill me-1"></i> Review Submissions ({r.submission_count || 0})
@@ -524,59 +563,77 @@ const Assignments = () => {
                                   <i className="bi bi-link-45deg me-1"></i>{sub.submission_url}
                                 </a>
                               )}
-                              <span className="small text-muted text-truncate d-block" style={{ maxWidth: '250px' }}>
+                      <span className="small text-muted text-truncate d-block" style={{ maxWidth: '250px' }}>
                                 {sub.submission_text || 'No text note.'}
                               </span>
                             </td>
                             <td className="small font-monospace">{sub.submission_date ? sub.submission_date.replace('T', ' ').slice(0, 16) : ''}</td>
                             <td>
-                              <span className={`badge ${sub.status === 'LATE' ? 'bg-warning bg-opacity-10 text-warning border border-warning' : sub.status === 'REVIEWED' ? 'bg-success bg-opacity-10 text-success border border-success' : 'bg-primary bg-opacity-10 text-primary border border-primary'} px-2.5 py-1 rounded-pill`}>
-                                {sub.status}
-                              </span>
+                              {sub.status ? (
+                                <span className={`badge ${sub.status === 'LATE' ? 'bg-warning bg-opacity-10 text-warning border border-warning' : sub.status === 'REVIEWED' ? 'bg-success bg-opacity-10 text-success border border-success' : 'bg-primary bg-opacity-10 text-primary border border-primary'} px-2.5 py-1 rounded-pill`}>
+                                  {sub.status}
+                                </span>
+                              ) : (
+                                <span className="badge bg-secondary bg-opacity-10 text-secondary border px-2.5 py-1 rounded-pill">
+                                  Not Submitted
+                                </span>
+                              )}
                             </td>
                             <td>
                               <span className="fw-bold text-dark">{sub.marks_obtained !== null ? `${sub.marks_obtained} / ${selectedAssignment.total_marks || 100}` : 'Ungraded'}</span>
                             </td>
                             <td>
-                              {evaluatingSub === sub.id ? (
-                                <div className="p-2 bg-light rounded-3 border">
-                                  <div className="row g-2 mb-2">
-                                    <div className="col-5">
+                              <div className="d-flex flex-column gap-1.5 align-items-start">
+                                <button
+                                  className={`btn btn-sm rounded-pill px-2.5 py-0.5 fw-bold ${sub.status ? 'btn-outline-danger' : 'btn-outline-success'}`}
+                                  onClick={() => handleMarkStatus(selectedAssignment.id, sub.student_id, sub.status)}
+                                  style={{ fontSize: '0.75rem' }}
+                                >
+                                  {sub.status ? '✕ Mark Unsubmitted' : '✓ Mark Submitted'}
+                                </button>
+                                
+                                {sub.status && (
+                                  evaluatingSub === sub.id ? (
+                                    <div className="p-2 bg-light rounded-3 border mt-1">
+                                      <div className="row g-2 mb-2">
+                                        <div className="col-5">
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            max={selectedAssignment.total_marks || 100}
+                                            className="form-control form-control-sm"
+                                            placeholder="Marks"
+                                            value={evalMarks}
+                                            onChange={e => setEvalMarks(e.target.value)}
+                                          />
+                                        </div>
+                                        <div className="col-7 d-flex gap-1">
+                                          <button type="button" className="btn btn-sm btn-success w-100" onClick={() => handleSaveEvaluation(sub.id)}>Save</button>
+                                          <button type="button" className="btn btn-sm btn-light" onClick={() => setEvaluatingSub(null)}>X</button>
+                                        </div>
+                                      </div>
                                       <input
-                                        type="number"
-                                        min="0"
-                                        max={selectedAssignment.total_marks || 100}
+                                        type="text"
                                         className="form-control form-control-sm"
-                                        placeholder="Marks"
-                                        value={evalMarks}
-                                        onChange={e => setEvalMarks(e.target.value)}
+                                        placeholder="Evaluation feedback note..."
+                                        value={evalFeedback}
+                                        onChange={e => setEvalFeedback(e.target.value)}
                                       />
                                     </div>
-                                    <div className="col-7 d-flex gap-1">
-                                      <button type="button" className="btn btn-sm btn-success w-100" onClick={() => handleSaveEvaluation(sub.id)}>Save</button>
-                                      <button type="button" className="btn btn-sm btn-light" onClick={() => setEvaluatingSub(null)}>X</button>
-                                    </div>
-                                  </div>
-                                  <input
-                                    type="text"
-                                    className="form-control form-control-sm"
-                                    placeholder="Evaluation feedback note..."
-                                    value={evalFeedback}
-                                    onChange={e => setEvalFeedback(e.target.value)}
-                                  />
-                                </div>
-                              ) : (
-                                <button
-                                  className="btn btn-sm btn-outline-secondary rounded-pill px-3"
-                                  onClick={() => {
-                                    setEvaluatingSub(sub.id);
-                                    setEvalMarks(sub.marks_obtained !== null ? sub.marks_obtained : '');
-                                    setEvalFeedback(sub.feedback || '');
-                                  }}
-                                >
-                                  <i className="bi bi-pencil me-1"></i> {sub.marks_obtained !== null ? 'Re-Grade' : 'Grade'}
-                                </button>
-                              )}
+                                  ) : (
+                                    <button
+                                      className="btn btn-sm btn-outline-secondary rounded-pill px-3 mt-1"
+                                      onClick={() => {
+                                        setEvaluatingSub(sub.id);
+                                        setEvalMarks(sub.marks_obtained !== null ? sub.marks_obtained : '');
+                                        setEvalFeedback(sub.feedback || '');
+                                      }}
+                                    >
+                                      <i className="bi bi-pencil me-1"></i> {sub.marks_obtained !== null ? 'Re-Grade' : 'Grade'}
+                                    </button>
+                                  )
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}

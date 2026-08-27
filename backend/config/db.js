@@ -20,8 +20,10 @@ const poolConfig = {
   password: dbPassword,
   database: dbName,
   waitForConnections: true,
-  connectionLimit: 15,
+  connectionLimit: 50,
   queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
   multipleStatements: true,
   connectTimeout: 20000 // 20s timeout for remote cloud hosts
 };

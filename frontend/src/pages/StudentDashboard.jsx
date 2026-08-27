@@ -12,12 +12,12 @@ const StudentDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [wallet, setWallet] = useState(null);
+  const [mockCredits, setMockCredits] = useState(null);
 
   useEffect(() => {
     fetchStudentDashboard();
-    // Fetch coin wallet
-    api.get('/wallet/my').then(r => setWallet(r.data?.wallet)).catch(() => {});
+    // Fetch mock interview credits balance
+    api.get('/mock-interviews/credits').then(r => setMockCredits(r.data?.data)).catch(() => {});
   }, []);
 
   const fetchStudentDashboard = async () => {
@@ -112,8 +112,8 @@ const StudentDashboard = () => {
         <div className="col-md-3">
           <DashboardCard
             title="Pending Fees"
-            value={`$${parseFloat(finance?.pending_fees || 0).toLocaleString()}`}
-            icon="bi-currency-dollar"
+            value={`${finance?.currency === 'USD' ? '$' : '₹'} ${parseFloat(finance?.pending_fees || 0).toLocaleString()}`}
+            icon="bi-cash-coin"
             color="danger"
             subtitle={finance?.next_installment_due ? `Next due: ${finance.next_installment_due.split('T')[0]}` : 'Balance remaining'}
           />
@@ -121,40 +121,12 @@ const StudentDashboard = () => {
 
         <div className="col-md-3">
           <DashboardCard
-            title="Upcoming Interviews"
-            value={interviews?.upcoming_count || 0}
-            icon="bi-camera-video"
+            title="Mock Credits"
+            value={`${mockCredits?.remaining ?? 0} Credits`}
+            icon="bi-shield-check"
             color="info"
-            subtitle={interviews?.upcoming ? `Topic: ${interviews.upcoming.topic}` : 'No scheduled sessions'}
+            subtitle={mockCredits?.expiry ? `Expiry: ${mockCredits.expiry.split('T')[0]}` : 'Assign credits to schedule'}
           />
-        </div>
-      </div>
-
-      {/* 🪙 Coin Wallet Banner */}
-      <div onClick={() => navigate('/wallet')} style={{ cursor: 'pointer', borderRadius: '16px', background: 'linear-gradient(135deg, #7c3aed, #f59e0b)', padding: '1.2rem 1.8rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 8px 30px rgba(124,58,237,0.3)', flexWrap: 'wrap', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span style={{ fontSize: '2.5rem' }}>🪙</span>
-          <div>
-            <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08rem' }}>My Coin Wallet</div>
-            <div style={{ color: '#fff', fontSize: '2rem', fontWeight: 900, lineHeight: 1 }}>
-              {(wallet?.coins_balance ?? 10000).toLocaleString('en-IN')}
-              <span style={{ fontSize: '1rem', marginLeft: '0.3rem', opacity: 0.8 }}>🪙</span>
-            </div>
-            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem' }}>≈ ₹{(wallet?.coins_balance ?? 10000).toLocaleString('en-IN')} · 1 coin = ₹1</div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
-          <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.15)', borderRadius: '10px', padding: '0.5rem 1rem' }}>
-            <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>{(wallet?.total_earned ?? 10000).toLocaleString()}</div>
-            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.72rem' }}>Total Earned</div>
-          </div>
-          <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.15)', borderRadius: '10px', padding: '0.5rem 1rem' }}>
-            <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>{(wallet?.total_spent ?? 0).toLocaleString()}</div>
-            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.72rem' }}>Total Spent</div>
-          </div>
-          <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '999px', padding: '0.5rem 1.2rem', color: '#fff', fontWeight: 700, fontSize: '0.85rem' }}>
-            View Wallet →
-          </div>
         </div>
       </div>
 

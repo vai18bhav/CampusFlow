@@ -22,7 +22,7 @@ const getStudentDashboard = async (req, res) => {
 
     // 1. Student Profile & Account Info
     const [profileRows] = await pool.query(
-      `SELECT s.id as student_id, s.roll_number as student_code,
+      `SELECT s.id as student_id, s.roll_number as student_code, s.mock_interview_credits, s.mock_credit_expiry,
               u.id as user_id, u.full_name, u.email, u.phone,
               a.id as admission_id, a.admission_number, a.status as admission_status,
               c.id as course_id, c.name as course_name, c.code as course_code,
@@ -103,7 +103,7 @@ const getStudentDashboard = async (req, res) => {
 
     // 4. Finance Widget & Installments (Module 8)
     const [invoicesRows] = await pool.query(
-      'SELECT id, net_amount, total_amount, paid_amount, due_amount, status, due_date FROM invoices WHERE student_id = ? ORDER BY id DESC LIMIT 1',
+      'SELECT id, net_amount, total_amount, paid_amount, due_amount, status, due_date, currency FROM invoices WHERE student_id = ? ORDER BY id DESC LIMIT 1',
       [studentId]
     );
 
@@ -113,7 +113,8 @@ const getStudentDashboard = async (req, res) => {
       pending_fees: 0,
       next_installment_amount: 0,
       next_installment_due: null,
-      status: 'No Invoice'
+      status: 'No Invoice',
+      currency: 'INR'
     };
 
     if (invoicesRows.length > 0) {
@@ -134,7 +135,8 @@ const getStudentDashboard = async (req, res) => {
         pending_fees: pendingFee,
         next_installment_amount: nextInst.length > 0 ? parseFloat(nextInst[0].amount) : pendingFee,
         next_installment_due: nextInst.length > 0 ? nextInst[0].due_date : inv.due_date,
-        status: inv.status
+        status: inv.status,
+        currency: inv.currency || 'INR'
       };
     }
 

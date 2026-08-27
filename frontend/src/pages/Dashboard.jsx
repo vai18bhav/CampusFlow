@@ -70,162 +70,190 @@ const Dashboard = () => {
       </div>
 
       {role === 'TRAINER' ? (
-        /* Trainer Dashboard View */
-        <div className="row g-3 mb-4">
-          <div className="col-md-3">
-            <DashboardCard title="Assigned Batches" value={stats?.assigned_batches || 0} icon="bi-layers" color="primary" />
-          </div>
-          <div className="col-md-3">
-            <DashboardCard title="Active Students" value={stats?.total_students || 0} icon="bi-people" color="success" />
-          </div>
-          <div className="col-md-3">
-            <DashboardCard title="Pending Evaluations" value={stats?.pending_evaluations || 0} icon="bi-journal-check" color="warning" />
-          </div>
-          <div className="col-md-3">
-            <DashboardCard title="Scheduled Interviews" value={stats?.scheduled_interviews || 0} icon="bi-mic" color="info" />
-          </div>
-        </div>
-      ) : role === 'SALES_EXECUTIVE' ? (
-        /* Sales Executive Dashboard View */
-        <div className="row g-3 mb-4">
-          <div className="col-md-3">
-            <DashboardCard title="Total Leads" value={stats?.total_leads || 0} icon="bi-funnel" color="primary" />
-          </div>
-          <div className="col-md-3">
-            <DashboardCard title="Converted Admissions" value={stats?.converted_leads || 0} icon="bi-person-check" color="success" />
-          </div>
-          <div className="col-md-3">
-            <DashboardCard title="In Progress Leads" value={stats?.in_progress_leads || 0} icon="bi-clock-history" color="warning" />
-          </div>
-          <div className="col-md-3">
-            <DashboardCard title="Conversion Ratio" value={`${stats?.conversion_rate || 0}%`} icon="bi-graph-up" color="info" />
-          </div>
-        </div>
-      ) : (
-        /* Admin & Super Admin Dashboard Overview */
+        /* Trainer Dashboard View (SRS Page 7-8) */
         <>
           <div className="row g-3 mb-4">
             <div className="col-md-3">
-              <DashboardCard title="Total Students" value={stats?.total_students || 0} icon="bi-mortarboard" color="primary" />
+              <DashboardCard title="Assigned Batches" value={stats?.assigned_batches || 0} icon="bi-layers" color="primary" />
             </div>
             <div className="col-md-3">
-              <DashboardCard title="Total Trainers" value={stats?.total_trainers || 0} icon="bi-person-badge" color="info" />
+              <DashboardCard title="Total Students" value={stats?.total_students || 0} icon="bi-mortarboard" color="success" />
             </div>
             <div className="col-md-3">
-              <DashboardCard title="Active Courses" value={stats?.active_courses || 0} icon="bi-book" color="success" />
+              <DashboardCard title="Pending Mocks" value={stats?.pending_mock_requests || 0} icon="bi-mic" color="warning" />
             </div>
             <div className="col-md-3">
-              <DashboardCard title="Active Batches" value={stats?.active_batches || 0} icon="bi-layers" color="warning" />
+              <DashboardCard title="Today's Classes" value={stats?.todays_classes || 0} icon="bi-calendar-event" color="info" />
             </div>
           </div>
 
           <div className="row g-3 mb-4">
-            <div className="col-md-3">
-              <DashboardCard title="Total Leads" value={stats?.total_leads || 0} icon="bi-funnel" color="primary" />
+            <div className="col-md-4">
+              <DashboardCard title="Upcoming Mocks" value={stats?.upcoming_mock_interviews || 0} icon="bi-clock-history" color="primary" />
             </div>
-            <div className="col-md-3">
-              <DashboardCard title="Total Admissions" value={stats?.total_admissions || 0} icon="bi-file-earmark-check" color="success" />
+            <div className="col-md-4">
+              <DashboardCard title="Pending Assignments" value={stats?.pending_assignment_tracking || 0} icon="bi-journal-code" color="warning" />
             </div>
-            <div className="col-md-3">
-              <DashboardCard title="Collected Revenue" value={`$${stats?.collected_revenue || 0}`} icon="bi-cash-stack" color="success" />
-            </div>
-            <div className="col-md-3">
-              <DashboardCard title="Pending Fees" value={`$${stats?.pending_fees || 0}`} icon="bi-exclamation-circle" color="danger" />
+            <div className="col-md-4">
+              <DashboardCard title="Delegated Mocks" value={stats?.delegated_mocks || 0} icon="bi-person-gear" color="success" />
             </div>
           </div>
 
-          {/* Visual Analytics & Distribution Charts */}
-          <div className="row g-3 mb-4">
-            <div className="col-md-8">
-              <div className="cf-card h-100 p-4">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <div>
-                    <h5 className="fw-bold mb-1">📊 Monthly Admissions & Tuition Collections</h5>
-                    <p className="text-muted small mb-0">Financial revenue generated over quarterly academic terms</p>
-                  </div>
-                  <span className="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 px-3 py-1 rounded-pill">
-                    +24% Growth
-                  </span>
-                </div>
-
-                <div style={{ height: '220px', display: 'flex', alignItems: 'flex-end', gap: '1.25rem', padding: '1rem 0' }}>
-                  {[
-                    { month: 'Apr', rev: 3200, adm: 8, height: '45%' },
-                    { month: 'May', rev: 4100, adm: 12, height: '60%' },
-                    { month: 'Jun', rev: 4800, adm: 15, height: '70%' },
-                    { month: 'Jul', rev: 5900, adm: 19, height: '85%' },
-                    { month: 'Aug', rev: 6400, adm: 22, height: '95%' },
-                    { month: 'Current', rev: stats?.collected_revenue || 3800, adm: stats?.total_admissions || 6, height: '75%', active: true }
-                  ].map((bar, i) => (
-                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
-                      <div className="small fw-bold mb-1" style={{ fontSize: '0.72rem', color: bar.active ? '#f97316' : 'var(--cf-text-muted)' }}>
-                        ${bar.rev}
-                      </div>
-                      <div
-                        style={{
-                          width: '100%',
-                          maxWidth: '42px',
-                          height: bar.height,
-                          borderRadius: '8px 8px 0 0',
-                          background: bar.active
-                            ? 'linear-gradient(180deg, #f97316, #f59e0b)'
-                            : 'linear-gradient(180deg, #3b82f6, #60a5fa)',
-                          boxShadow: bar.active ? '0 4px 12px rgba(249, 115, 22, 0.4)' : 'none',
-                          transition: 'height 0.4s ease'
-                        }}
-                      ></div>
-                      <div className="small fw-semibold mt-2" style={{ fontSize: '0.75rem', color: 'var(--cf-text-main)' }}>
-                        {bar.month}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+          {/* Quick Actions */}
+          <div className="card border-0 shadow-sm rounded-4 mb-4">
+            <div className="card-body p-4">
+              <h6 className="fw-bold text-dark mb-3"><i className="bi bi-lightning-charge-fill text-warning me-2"></i>Trainer Quick Actions</h6>
+              <div className="d-flex flex-wrap gap-2">
+                <a href="/attendance" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-2 fw-semibold">
+                  <i className="bi bi-calendar-check me-1.5"></i>Mark Attendance
+                </a>
+                <a href="/mock-interviews" className="btn btn-sm btn-outline-warning text-dark rounded-pill px-3 py-2 fw-semibold">
+                  <i className="bi bi-mic me-1.5"></i>Review Mock Requests
+                </a>
+                <a href="/assignments" className="btn btn-sm btn-outline-success rounded-pill px-3 py-2 fw-semibold">
+                  <i className="bi bi-journal-plus me-1.5"></i>Create Assignment
+                </a>
+                <a href="/timetable" className="btn btn-sm btn-outline-info rounded-pill px-3 py-2 fw-semibold">
+                  <i className="bi bi-calendar3 me-1.5"></i>View Schedule
+                </a>
               </div>
             </div>
+          </div>
+        </>
+      ) : role === 'SUPPORT_EXECUTIVE' ? (
+        /* Support Executive Dashboard View (SRS Page 9) */
+        <>
+          <div className="row g-3 mb-4">
+            <div className="col-md-2.4 col-sm-6" style={{ flex: '1 0 18%' }}>
+              <DashboardCard title="New Delegated" value={stats?.new_delegated_mocks || 0} icon="bi-inbox" color="primary" />
+            </div>
+            <div className="col-md-2.4 col-sm-6" style={{ flex: '1 0 18%' }}>
+              <DashboardCard title="Pending Acceptance" value={stats?.pending_acceptance || 0} icon="bi-clock-history" color="warning" />
+            </div>
+            <div className="col-md-2.4 col-sm-6" style={{ flex: '1 0 18%' }}>
+              <DashboardCard title="Today's Mocks" value={stats?.todays_mocks || 0} icon="bi-calendar-event" color="info" />
+            </div>
+            <div className="col-md-2.4 col-sm-6" style={{ flex: '1 0 18%' }}>
+              <DashboardCard title="Upcoming Mocks" value={stats?.upcoming_mocks || 0} icon="bi-mic" color="success" />
+            </div>
+            <div className="col-md-2.4 col-sm-6" style={{ flex: '1 0 18%' }}>
+              <DashboardCard title="Completed Mocks" value={stats?.completed_mocks || 0} icon="bi-check-circle" color="secondary" />
+            </div>
+          </div>
 
-            <div className="col-md-4">
-              <div className="cf-card h-100 p-4">
-                <h5 className="fw-bold mb-1">🎯 Academic Health</h5>
-                <p className="text-muted small mb-3">Student enrollment distribution & batch capacity</p>
+          {/* Quick Actions */}
+          <div className="card border-0 shadow-sm rounded-4 mb-4">
+            <div className="card-body p-4">
+              <h6 className="fw-bold text-dark mb-3"><i className="bi bi-lightning-charge-fill text-warning me-2"></i>Support Quick Actions</h6>
+              <div className="d-flex flex-wrap gap-2">
+                <a href="/mock-interviews" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-2 fw-semibold">
+                  <i className="bi bi-inbox me-1.5"></i>View Delegated Mocks
+                </a>
+                <a href="/timetable" className="btn btn-sm btn-outline-info rounded-pill px-3 py-2 fw-semibold">
+                  <i className="bi bi-calendar3 me-1.5"></i>View Schedule
+                </a>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : role === 'SALES_EXECUTIVE' ? (
+        /* Sales Executive Dashboard View (SRS Page 6-7) */
+        <>
+          <div className="row g-3 mb-4">
+            <div className="col-md-3">
+              <DashboardCard title="Admission Links" value={stats?.total_admission_links || 0} icon="bi-link-45deg" color="primary" />
+            </div>
+            <div className="col-md-3">
+              <DashboardCard title="Submitted Admissions" value={stats?.submitted_admissions || 0} icon="bi-clock-history" color="warning" />
+            </div>
+            <div className="col-md-3">
+              <DashboardCard title="Approved Admissions" value={stats?.approved_admissions || 0} icon="bi-check-circle-fill" color="success" />
+            </div>
+            <div className="col-md-3">
+              <DashboardCard title="Rejected Admissions" value={stats?.rejected_admissions || 0} icon="bi-x-circle-fill" color="danger" />
+            </div>
+          </div>
 
-                <div className="d-flex flex-column gap-3 mt-3">
-                  <div>
-                    <div className="d-flex justify-content-between small fw-bold mb-1">
-                      <span>Full Stack Web Dev (MERN)</span>
-                      <span className="text-primary">85% Filled</span>
-                    </div>
-                    <div className="progress" style={{ height: '8px', borderRadius: '4px' }}>
-                      <div className="progress-bar bg-primary" style={{ width: '85%' }}></div>
-                    </div>
-                  </div>
+          <div className="row g-3 mb-4">
+            <div className="col-md-3">
+              <DashboardCard title="Total Students" value={stats?.total_students || 0} icon="bi-mortarboard" color="info" />
+            </div>
+            <div className="col-md-3">
+              <DashboardCard title="Pending Instalments" value={stats?.pending_instalments || 0} icon="bi-hourglass-split" color="warning" />
+            </div>
+            <div className="col-md-3">
+              <DashboardCard title="Overdue Instalments" value={stats?.overdue_instalments || 0} icon="bi-exclamation-triangle" color="danger" />
+            </div>
+            <div className="col-md-3">
+              <DashboardCard title="Mock Credits Assigned" value={stats?.mock_credits_assigned || 0} icon="bi-mic" color="primary" />
+            </div>
+          </div>
 
-                  <div>
-                    <div className="d-flex justify-content-between small fw-bold mb-1">
-                      <span>Cloud DevOps Engineering</span>
-                      <span className="text-warning">68% Filled</span>
-                    </div>
-                    <div className="progress" style={{ height: '8px', borderRadius: '4px' }}>
-                      <div className="progress-bar bg-warning" style={{ width: '68%' }}></div>
-                    </div>
-                  </div>
+          {/* Quick Actions */}
+          <div className="card border-0 shadow-sm rounded-4 mb-4">
+            <div className="card-body p-4">
+              <h6 className="fw-bold text-dark mb-3"><i className="bi bi-lightning-charge-fill text-warning me-2"></i>Sales Quick Actions</h6>
+              <div className="d-flex flex-wrap gap-2">
+                <a href="/admission-links" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-2 fw-semibold">
+                  <i className="bi bi-link-45deg me-1.5"></i>Generate Admission Link
+                </a>
+                <a href="/coupons" className="btn btn-sm btn-outline-success rounded-pill px-3 py-2 fw-semibold">
+                  <i className="bi bi-ticket-perforated me-1.5"></i>Create Coupon
+                </a>
+                <a href="/admissions" className="btn btn-sm btn-outline-warning text-dark rounded-pill px-3 py-2 fw-semibold">
+                  <i className="bi bi-file-earmark-check me-1.5"></i>View Admissions
+                </a>
+                <a href="/finance" className="btn btn-sm btn-outline-info rounded-pill px-3 py-2 fw-semibold">
+                  <i className="bi bi-receipt me-1.5"></i>Create Invoice
+                </a>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        /* Admin Dashboard Overview (SRS Page 5 - FR-004) */
+        <>
+          <div className="row g-3 mb-4">
+            <div className="col-md-2.4 col-sm-6" style={{ flex: '1 0 18%' }}>
+              <DashboardCard title="Total Students" value={stats?.total_students || 0} icon="bi-mortarboard" color="primary" />
+            </div>
+            <div className="col-md-2.4 col-sm-6" style={{ flex: '1 0 18%' }}>
+              <DashboardCard title="Active Batches" value={stats?.active_batches || 0} icon="bi-layers" color="success" />
+            </div>
+            <div className="col-md-2.4 col-sm-6" style={{ flex: '1 0 18%' }}>
+              <DashboardCard title="Pending Admissions" value={stats?.pending_admissions || 0} icon="bi-clock-history" color="warning" />
+            </div>
+            <div className="col-md-2.4 col-sm-6" style={{ flex: '1 0 18%' }}>
+              <DashboardCard title="Overdue Invoices" value={stats?.overdue_invoices || 0} icon="bi-exclamation-triangle" color="danger" />
+            </div>
+            <div className="col-md-2.4 col-sm-6" style={{ flex: '1 0 18%' }}>
+              <DashboardCard title="Upcoming Mocks" value={stats?.upcoming_mocks || 0} icon="bi-mic" color="info" />
+            </div>
+          </div>
 
-                  <div>
-                    <div className="d-flex justify-content-between small fw-bold mb-1">
-                      <span>Data Science & Python ML</span>
-                      <span className="text-success">92% Filled</span>
-                    </div>
-                    <div className="progress" style={{ height: '8px', borderRadius: '4px' }}>
-                      <div className="progress-bar bg-success" style={{ width: '92%' }}></div>
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-light rounded-3 mt-2 border">
-                    <div className="d-flex justify-content-between align-items-center">
-                      <span className="small text-muted fw-semibold">🪙 Total Welcome Coins Issued:</span>
-                      <strong className="text-warning fs-6">40,000 🪙</strong>
-                    </div>
-                  </div>
-                </div>
+          {/* Quick Actions (FR-004) */}
+          <div className="card border-0 shadow-sm rounded-4 mb-4">
+            <div className="card-body p-4">
+              <h6 className="fw-bold text-dark mb-3"><i className="bi bi-lightning-charge-fill text-warning me-2"></i>Quick Actions</h6>
+              <div className="d-flex flex-wrap gap-2">
+                <a href="/students/add" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-2 fw-semibold">
+                  <i className="bi bi-person-plus-fill me-1.5"></i>Add Student
+                </a>
+                <a href="/users" className="btn btn-sm btn-outline-success rounded-pill px-3 py-2 fw-semibold">
+                  <i className="bi bi-person-badge-fill me-1.5"></i>Add Trainer
+                </a>
+                <a href="/users" className="btn btn-sm btn-outline-info rounded-pill px-3 py-2 fw-semibold">
+                  <i className="bi bi-funnel-fill me-1.5"></i>Add Sales Executive
+                </a>
+                <a href="/users" className="btn btn-sm btn-outline-secondary rounded-pill px-3 py-2 fw-semibold">
+                  <i className="bi bi-headset me-1.5"></i>Add Support Executive
+                </a>
+                <a href="/batches" className="btn btn-sm btn-outline-warning text-dark rounded-pill px-3 py-2 fw-semibold">
+                  <i className="bi bi-layers-fill me-1.5"></i>Create Batch
+                </a>
+                <a href="/admissions" className="btn btn-sm btn-outline-dark rounded-pill px-3 py-2 fw-semibold">
+                  <i className="bi bi-file-earmark-check-fill me-1.5"></i>View Admissions
+                </a>
               </div>
             </div>
           </div>

@@ -90,13 +90,97 @@ const getDashboardStats = async (req, res) => {
       });
     }
 
-    // Default Admin Overview Metrics
+    if (roleName === 'TRAINER') {
+      const trainerId = req.user.trainer_id || 0;
+      const [assignedBatches] = await pool.query('SELECT COUNT(*) as count FROM batches WHERE trainer_id = ? AND status IN ("UPCOMING", "ONGOING")', [trainerId]);
+      const [totalStudents] = await pool.query(
+        'SELECT COUNT(DISTINCT student_id) as count FROM batch_students bs JOIN batches b ON bs.batch_id = b.id WHERE b.trainer_id = ? AND bs.status = "ENROLLED"',
+        [trainerId]
+      );
+      const [pendingMocks] = await pool.query('SELECT COUNT(*) as count FROM mock_interviews WHERE trainer_id = ? AND status = "PENDING"', [trainerId]);
+      const [todaysClasses] = await pool.query('SELECT COUNT(*) as count FROM batches WHERE trainer_id = ? AND status = "ONGOING"', [trainerId]);
+      const [upcomingMocks] = await pool.query('SELECT COUNT(*) as count FROM mock_interviews WHERE trainer_id = ? AND status = "SCHEDULED"', [trainerId]);
+      const [pendingAssignments] = await pool.query('SELECT COUNT(*) as count FROM assignments WHERE trainer_id = ? AND status = "PUBLISHED"', [trainerId]);
+      const [delegatedMocks] = await pool.query('SELECT COUNT(*) as count FROM mock_interviews WHERE (trainer_id = ? OR original_trainer_id = ?) AND delegation_status = "ACCEPTED"', [trainerId, req.user.id]);
+
+      return successResponse(res, 200, 'Trainer Dashboard Metrics', {
+        assigned_batches: assignedBatches[0].count,
+        total_students: totalStudents[0].count,
+        pending_mock_requests: pendingMocks[0].count,
+        todays_classes: todaysClasses[0].count,
+        upcoming_mock_interviews: upcomingMocks[0].count,
+        pending_assignment_tracking: pendingAssignments[0].count,
+        delegated_mocks: delegatedMocks[0].count
+      });
+    }
+
+    if (roleName === 'SUPPORT_EXECUTIVE') {
+      const userId = req.user.id;
+      const [newDelegated] = await pool.query(
+        'SELECT COUNT(*) as count FROM mock_interviews WHERE (delegated_to_user_id = ? OR (delegated_to_role_id = 5 AND delegated_to_user_id IS NULL)) AND delegation_status = "PENDING"',
+        [userId]
+      );
+      const [pendingAccept] = await pool.query(
+        'SELECT COUNT(*) as count FROM mock_interviews WHERE (delegated_to_user_id = ? OR (delegated_to_role_id = 5 AND delegated_to_user_id IS NULL)) AND delegation_status = "PENDING"',
+        [userId]
+      );
+      const [todaysMocks] = await pool.query(
+        'SELECT COUNT(*) as count FROM mock_interviews WHERE (delegated_to_user_id = ? OR trainer_id = ?) AND DATE(scheduled_date) = CURRENT_DATE() AND status = "SCHEDULED"',
+        [userId, userId]
+      );
+      const [upcomingMocks] = await pool.query(
+        'SELECT COUNT(*) as count FROM mock_interviews WHERE (delegated_to_user_id = ? OR trainer_id = ?) AND status = "SCHEDULED"',
+        [userId, userId]
+      );
+      const [completedMocks] = await pool.query(
+        'SELECT COUNT(*) as count FROM mock_interviews WHERE (delegated_to_user_id = ? OR trainer_id = ?) AND status = "COMPLETED"',
+        [userId, userId]
+      );
+
+      return successResponse(res, 200, 'Support Executive Dashboard Metrics', {
+        new_delegated_mocks: newDelegated[0].count,
+        pending_acceptance: pendingAccept[0].count,
+        todays_mocks: todaysMocks[0].count,
+        upcoming_mocks: upcomingMocks[0].count,
+        completed_mocks: completedMocks[0].count
+      });
+    }
+
+    if (roleName === 'SALES_EXECUTIVE') {
+      const salesExecId = req.user.sales_exec_id || null;
+      const [totalLinks] = salesExecId
+        ? await pool.query('SELECT COUNT(*) as count FROM admission_links WHERE sales_exec_id = ?', [salesExecId])
+        : await pool.query('SELECT COUNT(*) as count FROM admission_links');
+      const [submitted] = await pool.query('SELECT COUNT(*) as count FROM admissions WHERE status = "SUBMITTED"');
+      const [approved] = await pool.query('SELECT COUNT(*) as count FROM admissions WHERE status = "APPROVED"');
+      const [rejected] = await pool.query('SELECT COUNT(*) as count FROM admissions WHERE status = "REJECTED"');
+      const [totalStudents] = await pool.query('SELECT COUNT(*) as count FROM students');
+      const [pendingInstalments] = await pool.query('SELECT COUNT(*) as count FROM installments WHERE status = "PENDING"');
+      const [overdueInstalments] = await pool.query('SELECT COUNT(*) as count FROM installments WHERE status = "OVERDUE" OR (status = "PENDING" AND due_date < CURRENT_DATE())');
+      const [mockCredits] = await pool.query('SELECT COALESCE(SUM(mock_interview_credits), 0) as total FROM students');
+
+      return successResponse(res, 200, 'Sales Executive Dashboard Metrics', {
+        total_admission_links: totalLinks[0].count,
+        submitted_admissions: submitted[0].count,
+        approved_admissions: approved[0].count,
+        rejected_admissions: rejected[0].count,
+        total_students: totalStudents[0].count,
+        pending_instalments: pendingInstalments[0].count,
+        overdue_instalments: overdueInstalments[0].count,
+        mock_credits_assigned: parseInt(mockCredits[0].total || 0, 10)
+      });
+    }
+
+    // Default Admin Overview Metrics (SRS Page 5 - FR-004)
     const [totalStudents] = await pool.query('SELECT COUNT(*) as count FROM students');
     const [totalTrainers] = await pool.query('SELECT COUNT(*) as count FROM trainers');
     const [activeCourses] = await pool.query('SELECT COUNT(*) as count FROM courses WHERE status = "ACTIVE"');
     const [activeBatches] = await pool.query('SELECT COUNT(*) as count FROM batches WHERE status IN ("UPCOMING", "ONGOING")');
     const [totalLeads] = await pool.query('SELECT COUNT(*) as count FROM leads');
-    const [totalAdmissions] = await pool.query('SELECT COUNT(*) as count FROM admissions WHERE status = "CONFIRMED"');
+    const [totalAdmissions] = await pool.query('SELECT COUNT(*) as count FROM admissions WHERE status IN ("APPROVED", "CONFIRMED")');
+    const [pendingAdmissions] = await pool.query('SELECT COUNT(*) as count FROM admissions WHERE status IN ("SUBMITTED", "SENT", "OPENED", "IN_PROGRESS")');
+    const [overdueInvoices] = await pool.query('SELECT COUNT(*) as count FROM invoices WHERE status = "UNPAID" OR status = "PARTIAL"');
+    const [upcomingMocks] = await pool.query('SELECT COUNT(*) as count FROM mock_interviews WHERE status = "SCHEDULED"');
 
     const [feeStats] = await pool.query(
       'SELECT SUM(net_amount) as total_revenue, SUM(paid_amount) as collected_revenue, SUM(due_amount) as pending_fees FROM invoices'
@@ -109,6 +193,9 @@ const getDashboardStats = async (req, res) => {
       active_batches: activeBatches[0].count,
       total_leads: totalLeads[0].count,
       total_admissions: totalAdmissions[0].count,
+      pending_admissions: pendingAdmissions[0].count,
+      overdue_invoices: overdueInvoices[0].count,
+      upcoming_mocks: upcomingMocks[0].count,
       pending_fees: parseFloat(feeStats[0]?.pending_fees || 0),
       total_revenue: parseFloat(feeStats[0]?.total_revenue || 0),
       collected_revenue: parseFloat(feeStats[0]?.collected_revenue || 0)

@@ -7,6 +7,7 @@ const {
   getTrainers,
   updateUser,
   updateUserStatus,
+  resetUserPassword,
   getPendingApprovals,
   approveUser,
   rejectUser,
@@ -24,12 +25,13 @@ router.put('/:id/approve', authorizeRoles('SUPER_ADMIN', 'ADMIN'), approveUser);
 router.put('/:id/reject', authorizeRoles('SUPER_ADMIN', 'ADMIN'), rejectUser);
 
 router.get('/', authorizeRoles('SUPER_ADMIN', 'ADMIN'), getAllUsers);
-// Allow SUPER_ADMIN, ADMIN, TRAINER, and SALES_EXECUTIVE to create/register users/students
-router.post('/', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'TRAINER', 'SALES_EXECUTIVE'), createUser);
+// Only SUPER_ADMIN and ADMIN can create new user accounts (SRS Page 3 - User Management)
+router.post('/', authorizeRoles('SUPER_ADMIN', 'ADMIN'), createUser);
 router.get('/students', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'SALES_EXECUTIVE', 'TRAINER', 'SUPPORT_EXECUTIVE'), getStudents);
 router.get('/trainers', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'STUDENT', 'TRAINER', 'SALES_EXECUTIVE', 'SUPPORT_EXECUTIVE'), getTrainers);
 router.put('/:id', authorizeRoles('SUPER_ADMIN', 'ADMIN'), updateUser);
 router.patch('/:id/status', authorizeRoles('SUPER_ADMIN', 'ADMIN'), updateUserStatus);
+router.patch('/:id/reset-password', authorizeRoles('SUPER_ADMIN', 'ADMIN'), resetUserPassword);
 router.delete('/:id', authorizeRoles('SUPER_ADMIN', 'ADMIN'), deleteUser);
 
 module.exports = router;

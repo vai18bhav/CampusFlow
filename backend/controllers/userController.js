@@ -2,7 +2,6 @@ const bcrypt = require('bcryptjs');
 const pool = require('../config/db');
 const { successResponse, errorResponse } = require('../utils/responseHelper');
 const { sendStudentWelcomeEmail } = require('../utils/emailService');
-const { initStudentWallet } = require('./walletController');
 
 /**
  * Get All Users (Admin / Super Admin)
@@ -71,6 +70,14 @@ const createUser = async (req, res) => {
 
     const roleName = roles[0].name;
 
+    // RBAC: Admin cannot create, edit, deactivate, or manage Super Admin or other Admin accounts (SRS Page 5 - FR-001)
+    const requestingRole = req.user?.role_name?.toUpperCase().replace(/\s+/g, '_');
+    const targetRoleNorm = roleName.toUpperCase().replace(/\s+/g, '_');
+    if (requestingRole === 'ADMIN' && ['SUPER_ADMIN', 'ADMIN'].includes(targetRoleNorm)) {
+      await connection.rollback();
+      return errorResponse(res, 403, 'Admins are not permitted to create Super Admin or Admin accounts.');
+    }
+
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
@@ -97,9 +104,6 @@ const createUser = async (req, res) => {
           role_data?.guardian_phone || null
         ]
       );
-      // 🪙 Give 10,000 welcome coins to every new student
-      const newStudentId = stuResult.insertId;
-      await initStudentWallet(connection, newStudentId, req.user?.id || null);
     } else if (roleName === 'TRAINER') {
       const empId = role_data?.employee_id || `EMP-TRN-${String(userId).padStart(3, '0')}`;
       await connection.query(
@@ -227,9 +231,20 @@ const updateUser = async (req, res) => {
     const { id } = req.params;
     const { full_name, phone, status } = req.body;
 
-    const [existing] = await pool.query('SELECT id FROM users WHERE id = ?', [id]);
+    const [existing] = await pool.query(
+      'SELECT u.id, r.name as role_name FROM users u JOIN roles r ON u.role_id = r.id WHERE u.id = ?',
+      [id]
+    );
     if (existing.length === 0) {
       return errorResponse(res, 404, 'User not found');
+    }
+
+    const targetUser = existing[0];
+    const requestingRole = req.user?.role_name?.toUpperCase().replace(/\s+/g, '_');
+    const targetRoleNorm = targetUser.role_name.toUpperCase().replace(/\s+/g, '_');
+
+    if (requestingRole === 'ADMIN' && ['SUPER_ADMIN', 'ADMIN'].includes(targetRoleNorm)) {
+      return errorResponse(res, 403, 'Admins are not permitted to edit Super Admin or Admin accounts.');
     }
 
     await pool.query(
@@ -285,9 +300,20 @@ const updateUserStatus = async (req, res) => {
       return errorResponse(res, 400, 'Valid status (ACTIVE, INACTIVE, SUSPENDED) is required');
     }
 
-    const [existing] = await pool.query('SELECT id FROM users WHERE id = ?', [id]);
+    const [existing] = await pool.query(
+      'SELECT u.id, r.name as role_name FROM users u JOIN roles r ON u.role_id = r.id WHERE u.id = ?',
+      [id]
+    );
     if (existing.length === 0) {
       return errorResponse(res, 404, 'User not found');
+    }
+
+    const targetUser = existing[0];
+    const requestingRole = req.user?.role_name?.toUpperCase().replace(/\s+/g, '_');
+    const targetRoleNorm = targetUser.role_name.toUpperCase().replace(/\s+/g, '_');
+
+    if (requestingRole === 'ADMIN' && ['SUPER_ADMIN', 'ADMIN'].includes(targetRoleNorm)) {
+      return errorResponse(res, 403, 'Admins are not permitted to deactivate Super Admin or Admin accounts.');
     }
 
     await pool.query('UPDATE users SET status = ? WHERE id = ?', [status, id]);
@@ -358,6 +384,42 @@ const rejectUser = async (req, res) => {
   }
 };
 
+/**
+ * Reset User Password (Super Admin / Admin)
+ */
+const resetUserPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { new_password } = req.body;
+
+    if (!new_password || new_password.trim().length < 6) {
+      return errorResponse(res, 400, 'New password must be at least 6 characters long');
+    }
+
+    const [users] = await pool.query('SELECT u.id, u.full_name, u.email, r.name as role_name FROM users u JOIN roles r ON u.role_id = r.id WHERE u.id = ?', [id]);
+    if (users.length === 0) {
+      return errorResponse(res, 404, 'User account not found');
+    }
+
+    const targetUser = users[0];
+    const requestingRole = req.user?.role_name?.toUpperCase().replace(/\s+/g, '_');
+
+    // Admin cannot reset Super Admin password
+    if (requestingRole === 'ADMIN' && targetUser.role_name.toUpperCase().replace(/\s+/g, '_') === 'SUPER_ADMIN') {
+      return errorResponse(res, 403, 'Admins are not permitted to reset Super Admin passwords.');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(new_password.trim(), salt);
+
+    await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, id]);
+
+    return successResponse(res, 200, `Password for ${targetUser.full_name} (${targetUser.email}) has been reset successfully.`);
+  } catch (error) {
+    return errorResponse(res, 500, 'Password reset failed', error.message);
+  }
+};
+
 module.exports = {
   getAllUsers,
   createUser,
@@ -365,9 +427,11 @@ module.exports = {
   getTrainers,
   updateUser,
   updateUserStatus,
+  resetUserPassword,
   getPendingApprovals,
   approveUser,
   rejectUser,
   deleteUser,
   getRoles
 };
+

@@ -6,10 +6,10 @@ dotenv.config();
 // Helper to strip accidental quotes and spaces from env vars
 const sanitize = (val) => typeof val === 'string' ? val.trim().replace(/^["']|["']$/g, '') : val;
 
-const dbHost = sanitize(process.env.DB_HOST) || 'mysql-33a4f609-vaibhavgawande509-015a.e.aivencloud.com';
-const dbPort = parseInt(process.env.DB_PORT || '26103', 10);
-const dbUser = sanitize(process.env.DB_USER) || 'avnadmin';
-const dbPassword = sanitize(process.env.DB_PASSWORD) || 'AVNS_dZDQDUbcD0Hgrur9DqM';
+const dbHost = sanitize(process.env.DB_HOST) || 'localhost';
+const dbPort = parseInt(process.env.DB_PORT || '3307', 10);
+const dbUser = sanitize(process.env.DB_USER) || 'root';
+const dbPassword = sanitize(process.env.DB_PASSWORD) || 'Pass@123';
 const dbName = sanitize(process.env.DB_NAME) || 'campusflow_db';
 
 // Support SSL connection for Cloud MySQL (Aiven, TiDB, Clever Cloud, Railway, AWS RDS, etc.)

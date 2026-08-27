@@ -11,7 +11,7 @@ const dbName = process.env.DB_NAME || 'campusflow_db';
 
 // Support SSL connection for Cloud MySQL (Aiven, TiDB, Clever Cloud, Railway, AWS RDS, etc.)
 const isRemoteHost = dbHost !== 'localhost' && dbHost !== '127.0.0.1';
-const useSSL = process.env.DB_SSL === 'true' || (process.env.NODE_ENV === 'production' && isRemoteHost);
+const useSSL = process.env.DB_SSL === 'true' || isRemoteHost;
 
 const poolConfig = {
   host: dbHost,

@@ -6,8 +6,8 @@ dotenv.config();
 const createTransporter = () => {
   const host = process.env.SMTP_HOST || process.env.EMAIL_HOST || 'smtp.gmail.com';
   const port = parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT || '587', 10);
-  const user = process.env.SMTP_USER || process.env.EMAIL_USER || '';
-  const pass = process.env.SMTP_PASSWORD || process.env.EMAIL_PASS || '';
+  const user = process.env.SMTP_USER || process.env.EMAIL_USER || 'campusflow18@gmail.com';
+  const pass = process.env.SMTP_PASSWORD || process.env.EMAIL_PASS || 'rzswmverqdkrlbwr';
 
   if (user && pass) {
     return nodemailer.createTransport({

@@ -1,21 +1,24 @@
-# Use official Node.js lightweight Alpine image
+# Use official Node.js 20 LTS lightweight alpine image
 FROM node:20-alpine
 
-# Set working directory
+# Set working directory inside container
 WORKDIR /app
 
-# Copy package files first for cached dependency layer
+# Copy package manifests first for efficient caching
 COPY package*.json ./
 
 # Install production dependencies
 RUN npm ci --only=production
 
-# Copy application source code
+# Copy remaining backend source code
 COPY . .
 
-# Expose default Cloud Run port (Cloud Run sets PORT env variable, defaults to 8080 or 5000)
-ENV PORT=8080
-EXPOSE 8080
+# Expose backend API port
+EXPOSE 5000
 
-# Start Express server
+# Set environment variable defaults
+ENV PORT=5000
+ENV NODE_ENV=production
+
+# Start application server
 CMD ["node", "server.js"]

@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 // When running via Vite dev server (npm run dev), use the Vite proxy '/api'
-// In production, user passes VITE_API_URL. Automatically ensure '/api' is appended.
-let rawBaseUrl = (import.meta.env.VITE_API_URL || '/api').trim();
+// In production, user passes VITE_API_BASE_URL or VITE_API_URL. Automatically ensure '/api' is appended.
+let rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '/api').trim();
 
 // Normalize URL: remove trailing slashes
 rawBaseUrl = rawBaseUrl.replace(/\/+$/, '');

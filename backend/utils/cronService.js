@@ -64,8 +64,8 @@ async function checkScheduledNotifications() {
     );
     for (let inst of overdueInstallments) {
       // Update installment status to OVERDUE
-      await pool.query('UPDATE installments SET status = "OVERDUE" WHERE id = ?', [inst.id]);
-      await pool.query('UPDATE invoices SET status = "OVERDUE" WHERE id = ?', [inst.invoice_id]);
+      await pool.query("UPDATE installments SET status = 'OVERDUE' WHERE id = ?", [inst.id]);
+      await pool.query("UPDATE invoices SET status = 'OVERDUE' WHERE id = ?", [inst.invoice_id]);
 
       // Notify Student
       await createNotification(inst.student_user_id, '🚨 Installment Overdue', `Installment #${inst.installment_number} of amount ${inst.amount} is overdue. Please settle immediately.`, 'FEE');

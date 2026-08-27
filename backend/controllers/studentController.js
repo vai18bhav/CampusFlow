@@ -413,7 +413,7 @@ const getStudents = async (req, res) => {
     }
     if (batch_id) { query += ' AND b.id = ?'; params.push(batch_id); }
     if (admission_status) { query += ' AND a.status = ?'; params.push(admission_status.toUpperCase()); }
-    if (outstanding_invoice === 'true') { query += ' AND i.status IN ("UNPAID","PARTIALLY_PAID","OVERDUE")'; }
+    if (outstanding_invoice === 'true') { query += " AND i.status IN ('UNPAID','PARTIALLY_PAID','OVERDUE')"; }
     if (min_mock_credits) { query += ' AND s.mock_interview_credits >= ?'; params.push(parseInt(min_mock_credits, 10)); }
 
     // Count total for pagination

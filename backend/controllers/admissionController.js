@@ -205,7 +205,7 @@ const createAdmission = async (req, res) => {
 
     // 6. DUPLICATE ADMISSION VALIDATION CHECK
     const [existingAdm] = await connection.query(
-      'SELECT id FROM admissions WHERE student_id = ? AND course_id = ? AND status IN ("CONFIRMED", "PENDING")',
+      "SELECT id FROM admissions WHERE student_id = ? AND course_id = ? AND status IN ('CONFIRMED', 'PENDING')",
       [student_id, course_id]
     );
     if (existingAdm.length > 0) {

@@ -68,7 +68,7 @@ const getMockCredits = async (req, res) => {
     if (!rows.length) return errorResponse(res, 404, 'Student profile not found.');
 
     const student = rows[0];
-    const total = student.mock_credits_total || student.mock_interview_credits || 0;
+    const total = student.mock_credits_total || student.mock_interview_credits || 5;
     const used = student.mock_credits_used || 0;
     const remaining = Math.max(0, total - used);
     const expiry = student.mock_credits_expiry || student.mock_credit_expiry || null;
@@ -135,30 +135,39 @@ const requestMockInterview = async (req, res) => {
 
     // 1. Get student ID & check credit balance
     const [students] = await conn.query(
-      'SELECT id, mock_credits_total, mock_credits_used, mock_credits_expiry FROM students WHERE user_id = ? FOR UPDATE',
+      'SELECT id, mock_interview_credits, mock_credits_total, mock_credits_used, mock_credits_expiry, mock_credit_expiry FROM students WHERE user_id = ? FOR UPDATE',
       [req.user.id]
     );
-    if (!students.length) return errorResponse(res, 403, 'Only students can request mock interviews.');
+    if (!students.length) {
+      await conn.rollback();
+      return errorResponse(res, 403, 'Only students can request mock interviews.');
+    }
     const student = students[0];
 
-    const remaining = (student.mock_credits_total || 0) - (student.mock_credits_used || 0);
+    const totalCredits = student.mock_credits_total || student.mock_interview_credits || 5;
+    const usedCredits = student.mock_credits_used || 0;
+    const remaining = Math.max(0, totalCredits - usedCredits);
+
     if (remaining <= 0) {
+      await conn.rollback();
       return errorResponse(res, 400, 'No mock interview credits remaining. Contact Sales/Admin to purchase.');
     }
 
     // Check credit expiry
-    if (student.mock_credits_expiry) {
-      const expiry = new Date(student.mock_credits_expiry);
+    const expiryDate = student.mock_credits_expiry || student.mock_credit_expiry;
+    if (expiryDate) {
+      const expiry = new Date(expiryDate);
       expiry.setHours(23, 59, 59, 999);
       if (new Date() > expiry) {
+        await conn.rollback();
         return errorResponse(res, 400, 'Your mock interview credits have expired.');
       }
     }
 
-    // 2. Consume 1 credit
+    // 2. Consume 1 credit & sync totals
     await conn.query(
-      'UPDATE students SET mock_credits_used = mock_credits_used + 1 WHERE id = ?',
-      [student.id]
+      'UPDATE students SET mock_credits_total = ?, mock_interview_credits = ?, mock_credits_used = mock_credits_used + 1 WHERE id = ?',
+      [totalCredits, totalCredits, student.id]
     );
 
     // Default trainer selection: first active trainer if not chosen

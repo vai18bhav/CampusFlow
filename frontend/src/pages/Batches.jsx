@@ -101,7 +101,7 @@ const Batches = () => {
       batch_name: '',
       batch_code: '',
       course_id: coursesList.length > 0 ? coursesList[0].id : '',
-      trainer_id: trainersList.length > 0 ? trainersList[0].id : '',
+      trainer_id: trainersList.length > 0 ? trainersList[0].trainer_id : '',
       start_date: new Date().toISOString().split('T')[0],
       end_date: '',
       start_time: '09:00 AM',
@@ -370,7 +370,7 @@ const Batches = () => {
           <div className="col-md-2">
             <select className="form-select" value={trainerFilter} onChange={(e) => setTrainerFilter(e.target.value)}>
               <option value="">All Trainers</option>
-              {trainersList.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+              {trainersList.map(t => <option key={t.trainer_id} value={t.trainer_id}>{t.full_name}</option>)}
             </select>
           </div>
 
@@ -470,7 +470,7 @@ const Batches = () => {
                         onChange={(e) => setFormData({ ...formData, trainer_id: e.target.value })}
                       >
                         <option value="">-- Unassigned --</option>
-                        {trainersList.map(t => <option key={t.id} value={t.id}>{t.full_name} ({t.specialization || 'Faculty'})</option>)}
+                        {trainersList.map(t => <option key={t.trainer_id} value={t.trainer_id}>{t.full_name} ({t.specialization || 'Faculty'})</option>)}
                       </select>
                     </div>
                   </div>

@@ -27,10 +27,13 @@ const StudentDashboard = () => {
       const res = await api.get('/student/dashboard');
       if (res.success) {
         setDashboardData(res.data);
+      } else {
+        setError(res.message || 'Unable to load student dashboard. Please check back later.');
       }
     } catch (err) {
-      console.error('Failed to load student dashboard metrics');
-      setError('Unable to load student dashboard. Please check back later.');
+      console.error('Failed to load student dashboard metrics:', err);
+      const message = typeof err === 'string' ? err : (err?.response?.data?.message || err?.message || 'Unable to load student dashboard. Please check back later.');
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -47,9 +50,17 @@ const StudentDashboard = () => {
 
   if (error || !dashboardData) {
     return (
-      <div className="alert alert-danger p-4 rounded-4 shadow-sm">
-        <i className="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-        {error || 'Student dashboard metrics unavailable'}
+      <div className="alert alert-danger p-4 rounded-4 shadow-sm border-0 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
+        <div className="d-flex align-items-center gap-3">
+          <i className="bi bi-exclamation-triangle-fill fs-3 text-danger"></i>
+          <div>
+            <div className="fw-bold text-dark">Dashboard Load Failed</div>
+            <div className="small text-muted">{error || 'Student dashboard metrics unavailable.'}</div>
+          </div>
+        </div>
+        <button className="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold text-nowrap" onClick={fetchStudentDashboard}>
+          <i className="bi bi-arrow-clockwise me-1"></i> Try Again
+        </button>
       </div>
     );
   }

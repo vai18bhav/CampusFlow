@@ -61,22 +61,23 @@ const getMockCredits = async (req, res) => {
     }
 
     const [rows] = await pool.query(
-      'SELECT mock_credits_total, mock_credits_used, mock_credits_expiry FROM students WHERE user_id = ?',
+      'SELECT mock_interview_credits, mock_credits_total, mock_credits_used, mock_credit_expiry, mock_credits_expiry FROM students WHERE user_id = ?',
       [req.user.id]
     );
 
     if (!rows.length) return errorResponse(res, 404, 'Student profile not found.');
 
     const student = rows[0];
-    const total = student.mock_credits_total || 0;
+    const total = student.mock_credits_total || student.mock_interview_credits || 0;
     const used = student.mock_credits_used || 0;
     const remaining = Math.max(0, total - used);
+    const expiry = student.mock_credits_expiry || student.mock_credit_expiry || null;
 
     return successResponse(res, 200, 'Mock credits balance retrieved', {
       total,
       used,
       remaining,
-      expiry: student.mock_credits_expiry
+      expiry
     });
   } catch (error) {
     return errorResponse(res, 500, 'Failed to get mock credits', error.message);

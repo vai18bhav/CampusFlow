@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
+import { triggerCsvDownload } from '../utils/exportUtils';
+
 const statusBadge = (status) => {
   const map = {
     ACTIVE: 'bg-success', INACTIVE: 'bg-secondary', SUSPENDED: 'bg-danger',
@@ -108,11 +110,16 @@ const Students = () => {
           <h3 className="fw-bold text-dark mb-1"><i className="bi bi-people-fill text-primary me-2"></i>Students Directory</h3>
           <p className="text-muted mb-0">Manage enrolled students, admissions, invoices, and mock credits.</p>
         </div>
-        {canCreate && (
-          <button className="btn btn-primary rounded-pill px-4 fw-semibold shadow-sm" onClick={() => navigate('/students/add')}>
-            <i className="bi bi-person-plus-fill me-2"></i>Add Student
+        <div className="d-flex gap-2">
+          <button className="btn btn-outline-success rounded-pill px-3 fw-semibold shadow-sm" onClick={() => triggerCsvDownload('students', 'csv')}>
+            <i className="bi bi-filetype-csv me-2"></i>Export CSV
           </button>
-        )}
+          {canCreate && (
+            <button className="btn btn-primary rounded-pill px-4 fw-semibold shadow-sm" onClick={() => navigate('/students/add')}>
+              <i className="bi bi-person-plus-fill me-2"></i>Add Student
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}

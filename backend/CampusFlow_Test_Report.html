@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>CampusFlow — Test Report</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; color: #1e293b; font-size: 13px; }
+
+  /* Cover Page */
+  .cover {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #0ea5e9 100%);
+    color: white; padding: 60px 50px 50px; text-align: center;
+    page-break-after: always; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .cover-logo { font-size: 56px; margin-bottom: 16px; }
+  .cover-title { font-size: 36px; font-weight: 800; letter-spacing: -0.5px; }
+  .cover-subtitle { font-size: 16px; color: rgba(255,255,255,0.8); margin-top: 8px; }
+  .cover-divider { width: 80px; height: 4px; background: rgba(255,255,255,0.5); border-radius: 4px; margin: 28px auto; }
+  .cover-meta { display: flex; gap: 40px; justify-content: center; margin: 24px 0; flex-wrap: wrap; }
+  .cover-meta-item { text-align: center; }
+  .cover-meta-item .val { font-size: 42px; font-weight: 900; }
+  .cover-meta-item .lbl { font-size: 12px; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+  .cover-status { margin-top: 32px; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.4);
+    border-radius: 12px; padding: 14px 40px; font-size: 18px; font-weight: 700; display: inline-block; }
+  .cover-footer { margin-top: 40px; font-size: 11px; color: rgba(255,255,255,0.55); }
+
+  /* Content */
+  .content { padding: 32px 36px; max-width: 900px; margin: 0 auto; }
+  .page-title { font-size: 20px; font-weight: 800; color: #1e3a5f; border-bottom: 3px solid #2563eb;
+    padding-bottom: 10px; margin-bottom: 24px; }
+
+  /* Summary Cards */
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 32px; }
+  .summary-card { background: white; border-radius: 12px; padding: 18px 16px; text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08); border-top: 4px solid #2563eb; }
+  .summary-card.pass  { border-top-color: #16a34a; }
+  .summary-card.fail  { border-top-color: #dc2626; }
+  .summary-card.time  { border-top-color: #7c3aed; }
+  .summary-card.rate  { border-top-color: #0ea5e9; }
+  .summary-card .val  { font-size: 30px; font-weight: 900; color: #1e3a5f; }
+  .summary-card.pass .val { color: #16a34a; }
+  .summary-card.fail .val { color: #dc2626; }
+  .summary-card.rate .val { color: #0ea5e9; }
+  .summary-card.time .val { color: #7c3aed; }
+  .summary-card .lbl  { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+  /* Progress Bar */
+  .progress-wrap { background: white; border-radius: 12px; padding: 20px 24px; margin-bottom: 28px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .progress-label { display: flex; justify-content: space-between; font-size: 12px; color: #64748b; margin-bottom: 8px; }
+  .progress-bar { height: 14px; background: #e2e8f0; border-radius: 9px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #16a34a, #22c55e); border-radius: 9px;
+    transition: width 0.3s; }
+
+  /* Section Cards */
+  .section-card { background: white; border-radius: 12px; margin-bottom: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow: hidden; page-break-inside: avoid; }
+  .section-header { background: #f8fafc; padding: 12px 18px; display: flex; justify-content: space-between;
+    align-items: center; border-bottom: 1px solid #e2e8f0; }
+  .section-title { font-weight: 700; color: #1e3a5f; font-size: 13px; }
+  .section-meta { display: flex; align-items: center; gap: 12px; }
+  .section-count { font-size: 11px; color: #94a3b8; }
+  .section-pct { font-size: 13px; font-weight: 700; }
+
+  .test-table { width: 100%; border-collapse: collapse; }
+  .test-table th { background: #f1f5f9; padding: 8px 10px; text-align: left; font-size: 11px;
+    font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+  .test-table td { padding: 7px 10px; border-top: 1px solid #f1f5f9; font-size: 12px; vertical-align: middle; }
+  .row-pass { background: #f0fdf4; }
+  .row-fail { background: #fef2f2; }
+  .td-icon { font-size: 14px; font-weight: 700; }
+  .row-pass .td-icon { color: #16a34a; }
+  .row-fail .td-icon { color: #dc2626; }
+  .td-name { color: #334155; }
+  .td-status { }
+  .td-detail { color: #94a3b8; font-size: 11px; }
+  .badge { padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .badge-pass { background: #dcfce7; color: #15803d; }
+  .badge-fail { background: #fee2e2; color: #b91c1c; }
+
+  /* Module overview table */
+  .overview-table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px;
+    overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.07); margin-bottom: 28px; }
+  .overview-table th { background: #1e3a5f; color: white; padding: 10px 14px; font-size: 11px;
+    text-align: left; letter-spacing: 0.5px; text-transform: uppercase; }
+  .overview-table td { padding: 8px 14px; border-top: 1px solid #f1f5f9; font-size: 12px; }
+  .overview-table tr:nth-child(even) td { background: #f8fafc; }
+  .ov-pass { color: #16a34a; font-weight: 700; }
+  .ov-fail { color: #dc2626; font-weight: 700; }
+
+  /* Footer */
+  .report-footer { text-align: center; padding: 24px; color: #94a3b8; font-size: 11px; border-top: 1px solid #e2e8f0; margin-top: 16px; }
+
+  @media print {
+    body { background: white; }
+    .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .section-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .summary-card { -webkit-print-color-adjust: exact; print-color-adjust: exact; page-break-inside: avoid; }
+    .content { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ COVER PAGE ════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-logo">🎓</div>
+  <div class="cover-title">CampusFlow</div>
+  <div class="cover-subtitle">Enterprise Training &amp; Admission Management Portal</div>
+  <div class="cover-divider"></div>
+  <div style="font-size:22px; font-weight:800; letter-spacing:-0.3px;">Comprehensive Testing Report</div>
+  <div style="color:rgba(255,255,255,0.7); font-size:13px; margin-top:8px;">Full System Integration &amp; API Validation</div>
+
+  <div class="cover-meta" style="margin-top:36px;">
+    <div class="cover-meta-item">
+      <div class="val">82</div>
+      <div class="lbl">Total Tests</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="val" style="color:#86efac;">82</div>
+      <div class="lbl">Passed</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="val" style="color:#86efac;">0</div>
+      <div class="lbl">Failed</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="val">100.0%</div>
+      <div class="lbl">Pass Rate</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="val">1.63s</div>
+      <div class="lbl">Duration</div>
+    </div>
+  </div>
+
+  <div class="cover-status" style="background:rgba(134,239,172,0.2);
+    border-color:#86efac;">
+    ✅ ALL TESTS PASSED
+  </div>
+
+  <div class="cover-footer" style="margin-top:48px;">
+    <div>Generated: 27/9/2026, 10:54:04 am</div>
+    <div style="margin-top:4px;">Backend: Node.js / Express &nbsp;|&nbsp; Database: MySQL &nbsp;|&nbsp; Frontend: React + Vite</div>
+    <div style="margin-top:4px;">Test Environment: localhost:5000 &nbsp;|&nbsp; Modules Tested: 27</div>
+  </div>
+</div>
+
+<!-- ══ REPORT CONTENT ══════════════════════════════════════════ -->
+<div class="content">
+
+  <div class="page-title">📊 Executive Summary</div>
+
+  <!-- Stats Cards -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="val">82</div>
+      <div class="lbl">Total Tests</div>
+    </div>
+    <div class="summary-card pass">
+      <div class="val">82</div>
+      <div class="lbl">Tests Passed</div>
+    </div>
+    <div class="summary-card fail">
+      <div class="val">0</div>
+      <div class="lbl">Tests Failed</div>
+    </div>
+    <div class="summary-card rate">
+      <div class="val">100.0%</div>
+      <div class="lbl">Pass Rate</div>
+    </div>
+  </div>
+
+  <!-- Progress Bar -->
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span>Overall Test Progress</span>
+      <span>82 / 82 passed</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" style="width:100.0%"></div>
+    </div>
+  </div>
+
+  <!-- Module Overview Table -->
+  <div class="page-title" style="margin-top:8px;">📋 Module Overview</div>
+  <table class="overview-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Module</th>
+        <th>Tests</th>
+        <th>Passed</th>
+        <th>Failed</th>
+        <th>Result</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+          <td style="color:#94a3b8;">1</td>
+          <td style="font-weight:600;">1. System Health Check</td>
+          <td>2</td>
+          <td class="ov-pass">2</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">2</td>
+          <td style="font-weight:600;">2. Authentication — Login All 6 Roles</td>
+          <td>6</td>
+          <td class="ov-pass">6</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">3</td>
+          <td style="font-weight:600;">3. Role-Based Access Control (RBAC)</td>
+          <td>6</td>
+          <td class="ov-pass">6</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">4</td>
+          <td style="font-weight:600;">4. Students Module</td>
+          <td>3</td>
+          <td class="ov-pass">3</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">5</td>
+          <td style="font-weight:600;">5. Courses Module</td>
+          <td>3</td>
+          <td class="ov-pass">3</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">6</td>
+          <td style="font-weight:600;">6. Batches Module</td>
+          <td>2</td>
+          <td class="ov-pass">2</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">7</td>
+          <td style="font-weight:600;">7. Trainers Module</td>
+          <td>2</td>
+          <td class="ov-pass">2</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">8</td>
+          <td style="font-weight:600;">8. Admissions Module</td>
+          <td>2</td>
+          <td class="ov-pass">2</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">9</td>
+          <td style="font-weight:600;">9. Admission Links (Public Form)</td>
+          <td>2</td>
+          <td class="ov-pass">2</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">10</td>
+          <td style="font-weight:600;">10. Assignments Module</td>
+          <td>3</td>
+          <td class="ov-pass">3</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">11</td>
+          <td style="font-weight:600;">11. Attendance Module</td>
+          <td>2</td>
+          <td class="ov-pass">2</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">12</td>
+          <td style="font-weight:600;">12. Mock Interviews Module</td>
+          <td>3</td>
+          <td class="ov-pass">3</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">13</td>
+          <td style="font-weight:600;">13. Finance / Invoices / Payments</td>
+          <td>4</td>
+          <td class="ov-pass">4</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">14</td>
+          <td style="font-weight:600;">14. Leads / CRM Module</td>
+          <td>2</td>
+          <td class="ov-pass">2</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">15</td>
+          <td style="font-weight:600;">15. Enrollment Requests Module</td>
+          <td>2</td>
+          <td class="ov-pass">2</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">16</td>
+          <td style="font-weight:600;">16. Timetable Module</td>
+          <td>2</td>
+          <td class="ov-pass">2</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">17</td>
+          <td style="font-weight:600;">17. Notifications Module</td>
+          <td>1</td>
+          <td class="ov-pass">1</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">18</td>
+          <td style="font-weight:600;">18. Coupons Module</td>
+          <td>2</td>
+          <td class="ov-pass">2</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">19</td>
+          <td style="font-weight:600;">19. Reports Module</td>
+          <td>1</td>
+          <td class="ov-pass">1</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">20</td>
+          <td style="font-weight:600;">20. Users & Platform Admin Module</td>
+          <td>3</td>
+          <td class="ov-pass">3</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">21</td>
+          <td style="font-weight:600;">21. Student Dashboard Module</td>
+          <td>1</td>
+          <td class="ov-pass">1</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">22</td>
+          <td style="font-weight:600;">22. Wallet Module</td>
+          <td>1</td>
+          <td class="ov-pass">1</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">23</td>
+          <td style="font-weight:600;">23. Placement & Certificates Module</td>
+          <td>2</td>
+          <td class="ov-pass">2</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">24</td>
+          <td style="font-weight:600;">24. Email Service Module</td>
+          <td>10</td>
+          <td class="ov-pass">10</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">25</td>
+          <td style="font-weight:600;">25. Input Validation & Security</td>
+          <td>5</td>
+          <td class="ov-pass">5</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">26</td>
+          <td style="font-weight:600;">26. Performance Benchmarks</td>
+          <td>8</td>
+          <td class="ov-pass">8</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr><tr>
+          <td style="color:#94a3b8;">27</td>
+          <td style="font-weight:600;">27. Concurrent Load Test</td>
+          <td>2</td>
+          <td class="ov-pass">2</td>
+          <td class="">0</td>
+          <td><span class="badge badge-pass">PASS</span></td>
+        </tr>
+    </tbody>
+  </table>
+
+  <!-- Detailed Results -->
+  <div class="page-title" style="margin-top:8px;">🔍 Detailed Test Results</div>
+  
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">1. System Health Check</span>
+        <div class="section-meta">
+          <span class="section-count">2 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Server responds on port 5000</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Database connection is active</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">2. Authentication — Login All 6 Roles</span>
+        <div class="section-meta">
+          <span class="section-count">6 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Login: Super Admin</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">HTTP 200</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Login: Admin</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">HTTP 200</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Login: Sales Executive</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">HTTP 200</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Login: Trainer</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">HTTP 200</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Login: Support Executive</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">HTTP 200</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Login: Student</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">HTTP 200</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">3. Role-Based Access Control (RBAC)</span>
+        <div class="section-meta">
+          <span class="section-count">6 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Student CANNOT access /api/users (Admin only)</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Admin CAN access /api/users</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Student CAN access /api/mock-interviews</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Trainer CAN access /api/mock-interviews</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Unauthenticated request rejected (401)</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Tampered JWT rejected (401)</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">4. Students Module</span>
+        <div class="section-meta">
+          <span class="section-count">3 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">GET /api/students — list fetched</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Response contains students array</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Student count > 0 (found: 13)</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">5. Courses Module</span>
+        <div class="section-meta">
+          <span class="section-count">3 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">GET /api/courses — list fetched</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Response contains courses array</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Course count > 0 (found: 4)</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">6. Batches Module</span>
+        <div class="section-meta">
+          <span class="section-count">2 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">GET /api/batches — list fetched</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Response contains batches array</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">7. Trainers Module</span>
+        <div class="section-meta">
+          <span class="section-count">2 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">GET /api/users/trainers — list fetched</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Response contains trainers array</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">8. Admissions Module</span>
+        <div class="section-meta">
+          <span class="section-count">2 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">GET /api/admissions — list fetched</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Response contains admissions array</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">9. Admission Links (Public Form)</span>
+        <div class="section-meta">
+          <span class="section-count">2 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Sales can list admission links</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Invalid token returns 404/400</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">10. Assignments Module</span>
+        <div class="section-meta">
+          <span class="section-count">3 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Trainer can list assignments</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Response contains assignments array</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Student sees own batch assignments</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">11. Attendance Module</span>
+        <div class="section-meta">
+          <span class="section-count">2 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Trainer can fetch batch attendance</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Admin can view student attendance</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">12. Mock Interviews Module</span>
+        <div class="section-meta">
+          <span class="section-count">3 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Admin can list mock interviews</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Response contains interviews array</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Student can check mock credits</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">13. Finance / Invoices / Payments</span>
+        <div class="section-meta">
+          <span class="section-count">4 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">GET /api/finance/summary — fetched</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">GET /api/invoices — list fetched</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Response contains invoices array</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">GET /api/payments — history fetched</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">14. Leads / CRM Module</span>
+        <div class="section-meta">
+          <span class="section-count">2 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Sales can list leads</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Response contains leads array</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">15. Enrollment Requests Module</span>
+        <div class="section-meta">
+          <span class="section-count">2 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Admin can list enrollment requests</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Response contains requests array</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">16. Timetable Module</span>
+        <div class="section-meta">
+          <span class="section-count">2 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Student can view timetable</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Response contains slots array</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">17. Notifications Module</span>
+        <div class="section-meta">
+          <span class="section-count">1 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Student can view notifications</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">18. Coupons Module</span>
+        <div class="section-meta">
+          <span class="section-count">2 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Admin can list coupons</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Invalid coupon code rejected</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">19. Reports Module</span>
+        <div class="section-meta">
+          <span class="section-count">1 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Admin can access reports summary</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">20. Users & Platform Admin Module</span>
+        <div class="section-meta">
+          <span class="section-count">3 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Super Admin can list all users</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Response contains users array</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Super Admin can access audit logs</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">21. Student Dashboard Module</span>
+        <div class="section-meta">
+          <span class="section-count">1 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Student can access dashboard</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">22. Wallet Module</span>
+        <div class="section-meta">
+          <span class="section-count">1 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Student can access wallet</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">23. Placement & Certificates Module</span>
+        <div class="section-meta">
+          <span class="section-count">2 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Admin can access placements</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Admin can access certificates</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">24. Email Service Module</span>
+        <div class="section-meta">
+          <span class="section-count">10 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">emailService module loads without errors</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">sendStudentWelcomeEmail exported correctly</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">sendAssignmentEmail exported correctly</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">sendAssignmentGradedEmail exported correctly</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">sendAbsentAlertEmail exported correctly</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">sendPaymentReceiptEmail exported correctly</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">sendMockInterviewEmail exported correctly</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">sendEnrollmentDecisionEmail exported correctly</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">sendAdmissionConfirmationEmail exported correctly</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">sendBroadcastNoticeEmail exported correctly</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">25. Input Validation & Security</span>
+        <div class="section-meta">
+          <span class="section-count">5 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Invalid credentials → 401</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">No JWT token exposed on failed login</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">SQL injection attempt rejected</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Empty request body → validation error</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">Forged JWT token rejected → 401</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">26. Performance Benchmarks</span>
+        <div class="section-meta">
+          <span class="section-count">8 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">GET /api/health responds < 2000ms  (actual: 2ms)</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">2ms</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">GET /api/students responds < 2000ms  (actual: 12ms)</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">12ms</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">GET /api/courses responds < 2000ms  (actual: 6ms)</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">6ms</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">GET /api/mock-interviews responds < 2000ms  (actual: 7ms)</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">7ms</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">GET /api/invoices responds < 2000ms  (actual: 54ms)</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">54ms</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">GET /api/timetable responds < 2000ms  (actual: 15ms)</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">15ms</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">GET /api/assignments responds < 2000ms  (actual: 10ms)</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">10ms</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">GET /api/notifications responds < 2000ms  (actual: 13ms)</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">13ms</td>
+      </tr></tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">27. Concurrent Load Test</span>
+        <div class="section-meta">
+          <span class="section-count">2 tests</span>
+          <span class="section-pct" style="color:#16a34a">100%</span>
+        </div>
+      </div>
+      <table class="test-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Test Name</th>
+            <th style="width:80px">Status</th>
+            <th style="width:140px">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">10 concurrent requests all succeed</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr>
+      <tr class="row-pass">
+        <td class="td-icon">✓</td>
+        <td class="td-name">All resolved within 5000ms (actual: 28ms)</td>
+        <td class="td-status"><span class="badge badge-pass">PASS</span></td>
+        <td class="td-detail">—</td>
+      </tr></tbody>
+      </table>
+    </div>
+
+  <div class="report-footer">
+    <strong>CampusFlow</strong> — Comprehensive Testing Report &nbsp;|&nbsp;
+    Generated on 27/9/2026, 10:54:04 am &nbsp;|&nbsp;
+    Total Duration: 1.63s &nbsp;|&nbsp;
+    Pass Rate: 100.0%
+  </div>
+</div>
+
+</body>
+</html>

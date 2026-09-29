@@ -3,6 +3,7 @@ import api from '../services/api';
 import DataTable from '../components/common/DataTable';
 import DashboardCard from '../components/common/DashboardCard';
 import { useAuth } from '../context/AuthContext';
+import { triggerCsvDownload } from '../utils/exportUtils';
 
 const Finance = () => {
   const { role, user } = useAuth();
@@ -413,16 +414,16 @@ const Finance = () => {
       {/* Summary Cards */}
       <div className="row g-3 mb-4">
         <div className="col-md-3">
-          <DashboardCard title="Total Revenue" value={`₹${parseFloat(summary.INR?.total_revenue || 0).toLocaleString()} / $${parseFloat(summary.USD?.total_revenue || 0).toLocaleString()}`} icon="bi-currency-exchange" color="primary" subtitle="Gross tuition receivables" />
+          <DashboardCard title="Total Revenue" value={parseFloat(summary.INR?.total_revenue || 0)} prefix="₹ " icon="bi-currency-exchange" color="primary" subtitle="Gross tuition receivables" />
         </div>
         <div className="col-md-3">
-          <DashboardCard title="Total Collected" value={`₹${parseFloat(summary.INR?.total_collected || 0).toLocaleString()} / $${parseFloat(summary.USD?.total_collected || 0).toLocaleString()}`} icon="bi-check-circle" color="success" subtitle="Fee payments collected" />
+          <DashboardCard title="Total Collected" value={parseFloat(summary.INR?.total_collected || 0)} prefix="₹ " icon="bi-check-circle" color="success" subtitle="Fee payments collected" />
         </div>
         <div className="col-md-3">
-          <DashboardCard title="Total Pending" value={`₹${parseFloat(summary.INR?.total_pending || 0).toLocaleString()} / $${parseFloat(summary.USD?.total_pending || 0).toLocaleString()}`} icon="bi-clock-history" color="warning" subtitle="Outstanding balance" />
+          <DashboardCard title="Total Pending" value={parseFloat(summary.INR?.total_pending || 0)} prefix="₹ " icon="bi-clock-history" color="warning" subtitle="Outstanding balance" />
         </div>
         <div className="col-md-3">
-          <DashboardCard title="Overdue Amount" value={`₹${parseFloat(summary.INR?.overdue_amount || 0).toLocaleString()} / $${parseFloat(summary.USD?.overdue_amount || 0).toLocaleString()}`} icon="bi-exclamation-triangle" color="danger" subtitle="Past due dates balance" />
+          <DashboardCard title="Overdue Amount" value={parseFloat(summary.INR?.overdue_amount || 0)} prefix="₹ " icon="bi-exclamation-triangle" color="danger" subtitle="Past due dates balance" />
         </div>
       </div>
 

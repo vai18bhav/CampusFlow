@@ -22,7 +22,8 @@ const getStudentDashboard = async (req, res) => {
 
     // 1. Student Profile & Account Info
     const [profileRows] = await pool.query(
-      `SELECT s.id as student_id, s.roll_number as student_code, s.mock_interview_credits, s.mock_credit_expiry,
+      `SELECT s.id as student_id, s.roll_number as student_code,
+              s.mock_interview_credits, s.mock_credit_expiry,
               u.id as user_id, u.full_name, u.email, u.phone,
               a.id as admission_id, a.admission_number, a.status as admission_status,
               c.id as course_id, c.name as course_name, c.code as course_code,
@@ -35,9 +36,9 @@ const getStudentDashboard = async (req, res) => {
        LEFT JOIN batches b ON a.batch_id = b.id
        LEFT JOIN trainers t ON b.trainer_id = t.id
        LEFT JOIN users t_u ON t.user_id = t_u.id
-       WHERE s.id = ?
+       WHERE s.id = ? OR s.user_id = ?
        ORDER BY a.id DESC LIMIT 1`,
-      [studentId]
+      [studentId, userId]
     );
 
     if (profileRows.length === 0) {
@@ -145,8 +146,8 @@ const getStudentDashboard = async (req, res) => {
       `SELECT mi.id, mi.topic, mi.scheduled_date, mi.status,
               u.full_name as trainer_name
        FROM mock_interviews mi
-       JOIN trainers t ON mi.trainer_id = t.id
-       JOIN users u ON t.user_id = u.id
+       LEFT JOIN trainers t ON mi.trainer_id = t.id
+       LEFT JOIN users u ON t.user_id = u.id
        WHERE mi.student_id = ? AND mi.status = 'SCHEDULED'
        ORDER BY mi.scheduled_date ASC LIMIT 1`,
       [studentId]
@@ -156,8 +157,8 @@ const getStudentDashboard = async (req, res) => {
       `SELECT mi.id, mi.topic, mi.score, mi.status, mi.feedback, mi.key_strengths, mi.areas_for_improvement,
               u.full_name as trainer_name
        FROM mock_interviews mi
-       JOIN trainers t ON mi.trainer_id = t.id
-       JOIN users u ON t.user_id = u.id
+       LEFT JOIN trainers t ON mi.trainer_id = t.id
+       LEFT JOIN users u ON t.user_id = u.id
        WHERE mi.student_id = ? AND mi.status = 'COMPLETED'
        ORDER BY mi.id DESC LIMIT 1`,
       [studentId]
@@ -249,6 +250,7 @@ const getStudentDashboard = async (req, res) => {
       recentActivities: recentActivities.slice(0, 5)
     });
   } catch (error) {
+    console.error('getStudentDashboard error:', error);
     return errorResponse(res, 500, 'Failed to fetch student dashboard data', error.message);
   }
 };

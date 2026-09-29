@@ -1,6 +1,6 @@
 const pool = require('../config/db');
 const { successResponse, errorResponse } = require('../utils/responseHelper');
-const { sendEnrollmentApprovedEmail } = require('../utils/emailService');
+const { sendEnrollmentDecisionEmail } = require('../utils/emailService');
 
 /**
  * Helper to split course fees into installment milestones
@@ -314,16 +314,13 @@ const approveEnrollment = async (req, res) => {
     await conn.commit();
 
     // 7. Send Confirmation Email via SMTP
-    sendEnrollmentApprovedEmail({
-      to: reqData.student_email,
+    sendEnrollmentDecisionEmail({
+      toEmail: reqData.student_email,
       studentName: reqData.student_name,
       courseName: reqData.course_name,
       batchName: reqData.batch_name,
-      batchCode: reqData.batch_code,
-      coinsDeducted: 0,
-      remainingCoins: 0,
-      planLabel: isFullPayment ? 'Full Payment' : `${milestones.length} Installments`,
-      invoiceNumber: invoiceNo
+      status: 'APPROVED',
+      adminRemarks: admin_remarks || null
     }).catch(e => console.error('[EMAIL ERROR]', e.message));
 
     return successResponse(res, 200, 'Enrollment approved successfully! Admission and Invoice generated.', {
@@ -367,7 +364,7 @@ const rejectEnrollment = async (req, res) => {
       ['Rejected', admin_remarks || null, req.user.id, id]
     );
 
-    // Notify student
+    // Notify student in-app
     await pool.query(
       "INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, 'ADMISSION')",
       [
@@ -376,6 +373,22 @@ const rejectEnrollment = async (req, res) => {
         `Your enrollment request was not approved. Remarks: ${admin_remarks || 'Contact administration for details.'}`
       ]
     );
+
+    // Send rejection email to student
+    const [stuData] = await pool.query(
+      'SELECT u.full_name, u.email FROM students s JOIN users u ON s.user_id = u.id WHERE s.id = ?',
+      [rows[0].student_id]
+    );
+    if (stuData.length > 0) {
+      sendEnrollmentDecisionEmail({
+        toEmail: stuData[0].email,
+        studentName: stuData[0].full_name,
+        courseName: rows[0].course_name,
+        batchName: null,
+        status: 'REJECTED',
+        adminRemarks: admin_remarks || null
+      }).catch(e => console.error('[EMAIL ERROR]', e.message));
+    }
 
     return successResponse(res, 200, 'Enrollment request rejected.');
   } catch (error) {

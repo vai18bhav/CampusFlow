@@ -52,7 +52,7 @@ const MockInterviews = () => {
   const handleSchedule = async (e) => {
     e.preventDefault();
     try {
-      const res = await api.post('/mock-interviews/schedule', scheduleData);
+      const res = await api.post('/mock-interviews/request', scheduleData);
       if (res.success) {
         setShowScheduleModal(false);
         fetchData();

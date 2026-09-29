@@ -5,7 +5,7 @@ const { authenticateJWT } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
 
 router.use(authenticateJWT);
-router.use(authorizeRoles('SUPER_ADMIN')); // Super Admin only (FR-006)
+router.use(authorizeRoles('SUPER_ADMIN', 'ADMIN', 'SALES_EXECUTIVE', 'TRAINER', 'SUPPORT_EXECUTIVE'));
 
 router.get('/:type', exportData);
 

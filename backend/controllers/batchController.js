@@ -169,6 +169,7 @@ const createBatch = async (req, res) => {
     const batchMode = (mode || 'OFFLINE').toUpperCase();
     const batchStatus = (status || 'UPCOMING').toUpperCase();
     const timeSchedule = timing || (start_time && end_time ? `${start_time} - ${end_time}` : null);
+    const safeTrainerId = trainer_id && !isNaN(parseInt(trainer_id, 10)) ? parseInt(trainer_id, 10) : null;
 
     // Required Field Validations
     if (!course_id || !batchCode || !batchName || !start_date) {
@@ -203,7 +204,7 @@ const createBatch = async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         course_id,
-        trainer_id || null,
+        safeTrainerId,
         batchCode,
         batchName,
         start_date,

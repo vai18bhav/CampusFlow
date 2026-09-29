@@ -58,7 +58,8 @@ const login = async (req, res) => {
       userId: user.id,
       roleId: user.role_id,
       roleName: user.role_name,
-      email: user.email
+      email: user.email,
+      ...roleSpecificData
     });
 
     // Don't send password_hash back

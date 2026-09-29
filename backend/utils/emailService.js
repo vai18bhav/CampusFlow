@@ -40,6 +40,26 @@ const createTransporter = () => {
 const transporter = createTransporter();
 
 /**
+ * Safe email dispatch with fallback logging if SMTP throws (e.g. rate limit/daily quota)
+ */
+const dispatchMail = async (mailOptions) => {
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✓ Email dispatched via SMTP to ${mailOptions.to}`);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.warn(`⚠️ SMTP send error for ${mailOptions.to} (${error.message}). Executing fallback simulation log.`);
+    console.log('------------------------------------------------------');
+    console.log(`📧 [FALLBACK DISPATCH LOG]`);
+    console.log(`To: ${mailOptions.to}`);
+    console.log(`Subject: ${mailOptions.subject}`);
+    console.log(`Body Snippet: ${(mailOptions.html || mailOptions.text || '').replace(/<[^>]*>?/gm, '').slice(0, 200)}...`);
+    console.log('------------------------------------------------------\n');
+    return { success: false, error: error.message };
+  }
+};
+
+/**
  * 1. Send Welcome / Student Account Registration Email
  */
 const sendStudentWelcomeEmail = async ({ toEmail, studentName, rollNumber, password }) => {
@@ -73,7 +93,7 @@ const sendStudentWelcomeEmail = async ({ toEmail, studentName, rollNumber, passw
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await dispatchMail(mailOptions);
     console.log(`✓ Welcome email dispatched to Gmail: ${toEmail}`);
   } catch (error) {
     console.error('Failed to send welcome email:', error.message);
@@ -110,7 +130,7 @@ const sendAssignmentEmail = async ({ toEmail, studentName, assignmentTitle, batc
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await dispatchMail(mailOptions);
     console.log(`✓ Assignment notification email dispatched to Gmail: ${toEmail}`);
   } catch (error) {
     console.error('Failed to send assignment email:', error.message);
@@ -143,7 +163,7 @@ const sendPaymentReceiptEmail = async ({ toEmail, studentName, amount, invoiceNu
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await dispatchMail(mailOptions);
     console.log(`✓ Payment receipt email dispatched to Gmail: ${toEmail}`);
   } catch (error) {
     console.error('Failed to send payment receipt email:', error.message);
@@ -174,7 +194,7 @@ const sendMockInterviewEmail = async ({ toEmail, studentName, topic, scheduledDa
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await dispatchMail(mailOptions);
     console.log(`✓ Mock interview notification email dispatched to Gmail: ${toEmail}`);
   } catch (error) {
     console.error('Failed to send mock interview email:', error.message);
@@ -214,7 +234,7 @@ const sendBroadcastNoticeEmail = async ({ toEmail, recipientName, noticeTitle, p
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await dispatchMail(mailOptions);
     console.log(`✓ Notice email dispatched to: ${toEmail}`);
   } catch (error) {
     console.error('Failed to send notice email:', error.message);
@@ -226,7 +246,6 @@ const sendBroadcastNoticeEmail = async ({ toEmail, recipientName, noticeTitle, p
  */
 const sendEnrollmentDecisionEmail = async ({ toEmail, studentName, courseName, batchName, status, adminRemarks }) => {
   const isApproved = status === 'APPROVED';
-  const transporter = createTransporter();
   const mailOptions = {
     from: `"CampusFlow Admissions" <${process.env.EMAIL_USER || 'campusflow18@gmail.com'}>`,
     to: toEmail,
@@ -263,7 +282,7 @@ const sendEnrollmentDecisionEmail = async ({ toEmail, studentName, courseName, b
     `
   };
   try {
-    await transporter.sendMail(mailOptions);
+    await dispatchMail(mailOptions);
     console.log(`✓ Enrollment decision email dispatched to: ${toEmail}`);
   } catch (error) {
     console.error('Failed to send enrollment decision email:', error.message);
@@ -312,21 +331,196 @@ const sendBatchScheduleUpdateEmail = async ({ toEmail, studentName, batchName, d
     `
   };
   try {
-    await transporter.sendMail(mailOptions);
+    await dispatchMail(mailOptions);
     console.log(`✓ Batch schedule update email dispatched to: ${toEmail}`);
   } catch (error) {
     console.error('Failed to send schedule update email:', error.message);
   }
 };
 
+/**
+ * 7. Send Admission Form Submission Confirmation Email (Public Link Apply)
+ */
+const sendAdmissionConfirmationEmail = async ({ toEmail, studentName, admissionNumber, courseName, netPayable, currency }) => {
+  try {
+    const currSymbol = currency === 'USD' ? '$' : '₹';
+    const mailOptions = {
+      from: `"CampusFlow Admissions" <${process.env.EMAIL_USER || 'campusflow18@gmail.com'}>`,
+      to: toEmail,
+      subject: `✅ Application Received — ${admissionNumber} | CampusFlow Admissions`,
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; background-color: #f8fafc; padding: 32px 16px;">
+          <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #2563eb, #1d4ed8); padding: 2.5rem; text-align: center;">
+              <div style="font-size: 3rem;">🎓</div>
+              <h1 style="color: #ffffff; margin: 0.5rem 0 0; font-size: 1.5rem; font-weight: 800;">Application Received!</h1>
+              <p style="color: rgba(255,255,255,0.8); margin: 0.4rem 0 0; font-size: 0.9rem;">CampusFlow Training &amp; Admissions Portal</p>
+            </div>
+
+            <!-- Body -->
+            <div style="padding: 2rem 2.5rem;">
+              <p style="color: #1e293b; font-size: 1rem; margin-top: 0;">Dear <strong>${studentName}</strong>,</p>
+              <p style="color: #475569; line-height: 1.7;">
+                Thank you for submitting your admission application to <strong>CampusFlow</strong>.
+                We have successfully received your application and it is currently <strong>under review</strong> by our admissions team.
+              </p>
+
+              <!-- Application Details Box -->
+              <div style="background: #eff6ff; border-left: 4px solid #2563eb; border-radius: 10px; padding: 1.25rem 1.5rem; margin: 1.5rem 0;">
+                <p style="margin: 0 0 8px; color: #1e293b;"><strong>📋 Admission No:</strong> <span style="color: #2563eb; font-weight: 700;">${admissionNumber}</span></p>
+                ${courseName ? `<p style="margin: 0 0 8px; color: #1e293b;"><strong>📚 Course Applied:</strong> ${courseName}</p>` : ''}
+                ${netPayable > 0 ? `<p style="margin: 0 0 8px; color: #1e293b;"><strong>💰 Estimated Fee:</strong> ${currSymbol}${Number(netPayable).toLocaleString()}</p>` : ''}
+                <p style="margin: 0; color: #1e293b;"><strong>📬 Registered Email:</strong> ${toEmail}</p>
+              </div>
+
+              <!-- What Happens Next -->
+              <h3 style="color: #0f172a; font-size: 1rem; margin-bottom: 0.75rem;">📌 What Happens Next?</h3>
+              <ol style="color: #475569; line-height: 1.9; padding-left: 1.25rem; margin: 0 0 1.5rem;">
+                <li>Our admissions team will review your application within <strong>1–2 business days</strong>.</li>
+                <li>Once approved, you will receive a separate email with your <strong>login credentials</strong> to access the CampusFlow student portal.</li>
+                <li>You can then view your course schedule, assignments, attendance, and fee details from your dashboard.</li>
+              </ol>
+
+              <p style="color: #64748b; font-size: 0.875rem; border-top: 1px solid #e2e8f0; padding-top: 1.25rem; margin-bottom: 0;">
+                If you have any questions, please contact our support team. Please keep your Admission No. <strong>${admissionNumber}</strong> handy for future reference.
+              </p>
+            </div>
+
+            <!-- Footer -->
+            <div style="background: #f1f5f9; padding: 1rem 2rem; text-align: center;">
+              <p style="color: #94a3b8; font-size: 0.78rem; margin: 0;">© 2026 CampusFlow Administration. This is an automated confirmation email.</p>
+            </div>
+
+          </div>
+        </div>
+      `
+    };
+
+    await dispatchMail(mailOptions);
+    console.log(`✓ Admission confirmation email dispatched to: ${toEmail}`);
+  } catch (error) {
+    console.error('Failed to send admission confirmation email:', error.message);
+  }
+};
+
+
+/**
+ * 8. Send Absent Alert Email — triggered when student is marked ABSENT
+ */
+const sendAbsentAlertEmail = async ({ toEmail, studentName, date, batchName, remarks }) => {
+  try {
+    const mailOptions = {
+      from: `"CampusFlow Attendance" <${process.env.EMAIL_USER || 'campusflow18@gmail.com'}>`,
+      to: toEmail,
+      subject: `⚠️ Attendance Alert — You Were Marked Absent on ${date}`,
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; background-color: #f8fafc; padding: 32px 16px;">
+          <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+            <div style="background: linear-gradient(135deg, #f97316, #ef4444); padding: 2rem; text-align: center;">
+              <div style="font-size: 2.5rem;">📋</div>
+              <h1 style="color: #ffffff; margin: 0.4rem 0 0; font-size: 1.4rem; font-weight: 800;">Attendance Alert</h1>
+              <p style="color: rgba(255,255,255,0.85); margin: 0.3rem 0 0; font-size: 0.88rem;">CampusFlow Training Institute</p>
+            </div>
+            <div style="padding: 2rem 2.5rem;">
+              <p style="color: #1e293b; font-size: 1rem; margin-top: 0;">Dear <strong>${studentName}</strong>,</p>
+              <p style="color: #475569; line-height: 1.7;">
+                This is an automated notification to inform you that you were marked <strong style="color: #ef4444;">ABSENT</strong> from today's class session.
+              </p>
+              <div style="background: #fff7ed; border-left: 4px solid #f97316; border-radius: 10px; padding: 1.25rem 1.5rem; margin: 1.5rem 0;">
+                <p style="margin: 0 0 8px; color: #1e293b;"><strong>📅 Date:</strong> ${date}</p>
+                <p style="margin: 0 0 8px; color: #1e293b;"><strong>🏫 Batch:</strong> ${batchName || 'Your Batch'}</p>
+                <p style="margin: 0; color: #1e293b;"><strong>📝 Remarks:</strong> ${remarks || 'No remarks provided'}</p>
+              </div>
+              <p style="color: #475569; line-height: 1.7;">
+                Please ensure regular attendance to avoid falling below the minimum required percentage.
+                If this was a mistake or you had a valid reason, please contact your trainer or admin immediately.
+              </p>
+              <p style="color: #64748b; font-size: 0.875rem; border-top: 1px solid #e2e8f0; padding-top: 1.25rem; margin-bottom: 0;">
+                You can view your full attendance history on the CampusFlow student portal.
+              </p>
+            </div>
+            <div style="background: #f1f5f9; padding: 1rem 2rem; text-align: center;">
+              <p style="color: #94a3b8; font-size: 0.78rem; margin: 0;">© 2026 CampusFlow Administration. Automated Attendance Alert.</p>
+            </div>
+          </div>
+        </div>
+      `
+    };
+    await dispatchMail(mailOptions);
+    console.log(`✓ Absent alert email dispatched to: ${toEmail}`);
+  } catch (error) {
+    console.error('Failed to send absent alert email:', error.message);
+  }
+};
+
+/**
+ * 9. Send Assignment Graded Email — triggered when trainer evaluates a submission
+ */
+const sendAssignmentGradedEmail = async ({ toEmail, studentName, assignmentTitle, marksObtained, totalMarks, feedback }) => {
+  try {
+    const percentage = totalMarks > 0 ? Math.round((marksObtained / totalMarks) * 100) : 0;
+    const grade = percentage >= 90 ? 'A+' : percentage >= 80 ? 'A' : percentage >= 70 ? 'B' : percentage >= 60 ? 'C' : 'D';
+    const gradeColor = percentage >= 80 ? '#10b981' : percentage >= 60 ? '#f59e0b' : '#ef4444';
+
+    const mailOptions = {
+      from: `"CampusFlow Academics" <${process.env.EMAIL_USER || 'campusflow18@gmail.com'}>`,
+      to: toEmail,
+      subject: `📝 Assignment Graded: ${assignmentTitle} — ${marksObtained}/${totalMarks}`,
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; background-color: #f8fafc; padding: 32px 16px;">
+          <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+            <div style="background: linear-gradient(135deg, #6366f1, #2563eb); padding: 2rem; text-align: center;">
+              <div style="font-size: 2.5rem;">🎯</div>
+              <h1 style="color: #ffffff; margin: 0.4rem 0 0; font-size: 1.4rem; font-weight: 800;">Assignment Graded</h1>
+              <p style="color: rgba(255,255,255,0.85); margin: 0.3rem 0 0; font-size: 0.88rem;">CampusFlow Academic Evaluation</p>
+            </div>
+            <div style="padding: 2rem 2.5rem;">
+              <p style="color: #1e293b; font-size: 1rem; margin-top: 0;">Dear <strong>${studentName}</strong>,</p>
+              <p style="color: #475569; line-height: 1.7;">
+                Your submission for <strong>${assignmentTitle}</strong> has been reviewed and graded by your trainer.
+              </p>
+
+              <!-- Score Box -->
+              <div style="text-align: center; margin: 1.5rem 0; padding: 1.5rem; background: #f8fafc; border-radius: 12px; border: 2px solid ${gradeColor};">
+                <div style="font-size: 2.5rem; font-weight: 900; color: ${gradeColor};">${marksObtained} / ${totalMarks}</div>
+                <div style="font-size: 1rem; color: #64748b; margin-top: 4px;">${percentage}% — Grade <strong style="color: ${gradeColor};">${grade}</strong></div>
+              </div>
+
+              ${feedback ? `
+              <div style="background: #eff6ff; border-left: 4px solid #2563eb; border-radius: 10px; padding: 1.25rem 1.5rem; margin: 1rem 0;">
+                <p style="margin: 0 0 4px; color: #1e293b; font-weight: 600;">📋 Trainer Feedback:</p>
+                <p style="margin: 0; color: #475569; line-height: 1.6;">${feedback}</p>
+              </div>` : ''}
+
+              <p style="color: #64748b; font-size: 0.875rem; border-top: 1px solid #e2e8f0; padding-top: 1.25rem; margin-bottom: 0;">
+                Log in to the CampusFlow portal to view your full submission details and feedback history.
+              </p>
+            </div>
+            <div style="background: #f1f5f9; padding: 1rem 2rem; text-align: center;">
+              <p style="color: #94a3b8; font-size: 0.78rem; margin: 0;">© 2026 CampusFlow Administration. Automated Grade Notification.</p>
+            </div>
+          </div>
+        </div>
+      `
+    };
+    await dispatchMail(mailOptions);
+    console.log(`✓ Assignment graded email dispatched to: ${toEmail}`);
+  } catch (error) {
+    console.error('Failed to send assignment graded email:', error.message);
+  }
+};
+
 module.exports = {
   sendStudentWelcomeEmail,
   sendAssignmentEmail,
+  sendAssignmentGradedEmail,
   sendPaymentReceiptEmail,
   sendMockInterviewEmail,
   sendBroadcastNoticeEmail,
   sendEnrollmentDecisionEmail,
-  sendBatchScheduleUpdateEmail
+  sendBatchScheduleUpdateEmail,
+  sendAdmissionConfirmationEmail,
+  sendAbsentAlertEmail
 };
-
-

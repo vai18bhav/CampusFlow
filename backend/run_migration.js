@@ -59,17 +59,31 @@ async function run() {
       console.log('  + Added coupons.min_order_value');
     } else { console.log('  ✓ coupons.min_order_value already exists'); }
 
-    // 3. students.mock_interview_credits
+    // 3. students mock credit columns
     if (!await columnExists(conn, 'students', 'mock_interview_credits')) {
-      await conn.query("ALTER TABLE students ADD COLUMN mock_interview_credits INT DEFAULT 0 AFTER address");
+      await conn.query("ALTER TABLE students ADD COLUMN mock_interview_credits INT DEFAULT 0");
       console.log('  + Added students.mock_interview_credits');
     } else { console.log('  ✓ students.mock_interview_credits already exists'); }
 
-    // 4. students.mock_credit_expiry
+    if (!await columnExists(conn, 'students', 'mock_credits_total')) {
+      await conn.query("ALTER TABLE students ADD COLUMN mock_credits_total INT DEFAULT 0");
+      console.log('  + Added students.mock_credits_total');
+    } else { console.log('  ✓ students.mock_credits_total already exists'); }
+
+    if (!await columnExists(conn, 'students', 'mock_credits_used')) {
+      await conn.query("ALTER TABLE students ADD COLUMN mock_credits_used INT DEFAULT 0");
+      console.log('  + Added students.mock_credits_used');
+    } else { console.log('  ✓ students.mock_credits_used already exists'); }
+
     if (!await columnExists(conn, 'students', 'mock_credit_expiry')) {
-      await conn.query("ALTER TABLE students ADD COLUMN mock_credit_expiry DATE DEFAULT NULL AFTER mock_interview_credits");
+      await conn.query("ALTER TABLE students ADD COLUMN mock_credit_expiry DATE DEFAULT NULL");
       console.log('  + Added students.mock_credit_expiry');
     } else { console.log('  ✓ students.mock_credit_expiry already exists'); }
+
+    if (!await columnExists(conn, 'students', 'mock_credits_expiry')) {
+      await conn.query("ALTER TABLE students ADD COLUMN mock_credits_expiry DATE DEFAULT NULL");
+      console.log('  + Added students.mock_credits_expiry');
+    } else { console.log('  ✓ students.mock_credits_expiry already exists'); }
 
     // 5. Create admission_links table
     if (!await tableExists(conn, 'admission_links')) {
@@ -149,6 +163,12 @@ async function run() {
       await conn.query("ALTER TABLE invoices ADD COLUMN net_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER tax_amount");
       console.log('  + Added invoices.net_amount');
     } else { console.log('  ✓ invoices.net_amount already exists'); }
+
+    // 11B. invoices.currency
+    if (!await columnExists(conn, 'invoices', 'currency')) {
+      await conn.query("ALTER TABLE invoices ADD COLUMN currency ENUM('INR','USD','ANY') DEFAULT 'INR' AFTER due_date");
+      console.log('  + Added invoices.currency');
+    } else { console.log('  ✓ invoices.currency already exists'); }
 
     // 12. invoices.invoice_date
     if (!await columnExists(conn, 'invoices', 'invoice_date')) {

@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const { successResponse, errorResponse } = require('../utils/responseHelper');
+const { sendAbsentAlertEmail } = require('../utils/emailService');
 
 /**
  * GET /api/attendance
@@ -91,6 +92,27 @@ const markAttendance = async (req, res) => {
            ON DUPLICATE KEY UPDATE status = VALUES(status), marked_by = VALUES(marked_by), remarks = VALUES(remarks)`,
           [batch_id, student_id, targetDate, status || 'PRESENT', markedBy, remarks || null]
         );
+
+        // Send email alert for ABSENT students
+        if ((status || 'PRESENT') === 'ABSENT') {
+          const [stuInfo] = await connection.query(
+            `SELECT u.full_name, u.email, b.name as batch_name
+             FROM students s
+             JOIN users u ON s.user_id = u.id
+             JOIN batches b ON b.id = ?
+             WHERE s.id = ?`,
+            [batch_id, student_id]
+          );
+          if (stuInfo.length > 0) {
+            sendAbsentAlertEmail({
+              toEmail: stuInfo[0].email,
+              studentName: stuInfo[0].full_name,
+              date: targetDate,
+              batchName: stuInfo[0].batch_name,
+              remarks: remarks || null
+            }).catch(() => {});
+          }
+        }
       }
     }
 

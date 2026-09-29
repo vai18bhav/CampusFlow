@@ -41,13 +41,20 @@ const DataExport = () => {
     setDownloading(key); setMsg({ text: '', type: '' });
 
     try {
-      const response = await fetch(`http://localhost:5000/api/export/${type}?format=${format}`, {
+      const token = localStorage.getItem('cf_token') || localStorage.getItem('token');
+      const baseUrl = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '');
+      const finalUrl = baseUrl.startsWith('http') && !baseUrl.endsWith('/api') ? `${baseUrl}/api` : baseUrl;
+      
+      const response = await fetch(`${finalUrl}/export/${type}?format=${format}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
-      if (!response.ok) throw new Error(`Export failed with status ${response.status}`);
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || `Export failed with status ${response.status}`);
+      }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -61,7 +68,7 @@ const DataExport = () => {
 
       setMsg({ text: `Successfully exported ${type} data in ${format.toUpperCase()} format!`, type: 'success' });
     } catch (err) {
-      setMsg({ text: typeof err === 'string' ? err : 'Export failed. Please try again.', type: 'danger' });
+      setMsg({ text: typeof err === 'string' ? err : (err.message || 'Export failed. Please try again.'), type: 'danger' });
     } finally {
       setDownloading('');
     }

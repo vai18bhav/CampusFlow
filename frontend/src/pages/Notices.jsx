@@ -119,8 +119,10 @@ const Notices = () => {
                       value={formData.target_group}
                       onChange={(e) => setFormData({ ...formData, target_group: e.target.value })}
                     >
-                      <option value="ALL_STUDENTS">All Active Students</option>
-                      <option value="ALL_MEMBERS">All System Members (Staff & Students)</option>
+                      <option value="ALL_STUDENTS">All Active Students 🎓</option>
+                      <option value="ALL_TRAINERS">All Trainers 👨‍🏫</option>
+                      <option value="ALL_STAFF">All Staff Members 💼</option>
+                      <option value="ALL_MEMBERS">All System Members (Staff & Students) 🌐</option>
                     </select>
                   </div>
 

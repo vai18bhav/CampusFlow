@@ -132,13 +132,18 @@ const broadcastNotice = async (req, res) => {
       targetUsers = batchUsers;
     } else {
       // Group target selection
-      let userQuery = 'SELECT id, full_name, email FROM users WHERE status = "ACTIVE"';
+      let userQuery = `
+        SELECT u.id, u.full_name, u.email 
+        FROM users u 
+        JOIN roles r ON u.role_id = r.id 
+        WHERE u.status = "ACTIVE"
+      `;
       if (target_group === 'ALL_STUDENTS') {
-        userQuery += ' AND role_id = 6';
+        userQuery += ' AND r.name = "STUDENT"';
       } else if (target_group === 'ALL_TRAINERS') {
-        userQuery += ' AND role_id = 4';
+        userQuery += ' AND r.name = "TRAINER"';
       } else if (target_group === 'ALL_STAFF') {
-        userQuery += ' AND role_id IN (2, 3, 4, 5)';
+        userQuery += ' AND r.name IN ("ADMIN", "SUPER_ADMIN", "SALES_EXECUTIVE", "TRAINER", "SUPPORT_EXECUTIVE")';
       }
 
       const [users] = await pool.query(userQuery);

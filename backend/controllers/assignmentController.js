@@ -1,6 +1,6 @@
 const pool = require('../config/db');
 const { successResponse, errorResponse } = require('../utils/responseHelper');
-const { sendAssignmentEmail } = require('../utils/emailService');
+const { sendAssignmentEmail, sendAssignmentGradedEmail } = require('../utils/emailService');
 
 /**
  * GET /api/assignments
@@ -307,6 +307,29 @@ const evaluateSubmission = async (req, res) => {
        WHERE id = ?`,
       [marksNum, feedback || null, nextStatus, req.user.id, req.user.id, submissionId]
     );
+
+    // Notify student by email when graded
+    try {
+      const [subDetail] = await pool.query(
+        `SELECT a.title, sub.student_id, u.full_name, u.email
+         FROM assignment_submissions sub
+         JOIN assignments a ON sub.assignment_id = a.id
+         JOIN students s ON sub.student_id = s.id
+         JOIN users u ON s.user_id = u.id
+         WHERE sub.id = ?`,
+        [submissionId]
+      );
+      if (subDetail.length > 0) {
+        sendAssignmentGradedEmail({
+          toEmail: subDetail[0].email,
+          studentName: subDetail[0].full_name,
+          assignmentTitle: subDetail[0].title,
+          marksObtained: marksNum,
+          totalMarks: maxMarks,
+          feedback: feedback || null
+        }).catch(() => {});
+      }
+    } catch (e) { /* non-fatal */ }
 
     return successResponse(res, 200, 'Submission evaluated successfully');
   } catch (error) {

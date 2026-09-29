@@ -1,7 +1,7 @@
 import React from 'react';
 import AnimatedCounter from './AnimatedCounter';
 
-const DashboardCard = ({ title, value, icon, color = 'primary', subtitle }) => {
+const DashboardCard = ({ title, value, icon, color = 'primary', subtitle, prefix = '', suffix = '' }) => {
   return (
     <div className="cf-card h-100 shadow-sm">
       <div className="d-flex align-items-center justify-content-between">
@@ -10,7 +10,7 @@ const DashboardCard = ({ title, value, icon, color = 'primary', subtitle }) => {
             {title}
           </span>
           <h2 className="fw-extrabold mt-1.5 mb-0 dashboard-card-value" style={{ letterSpacing: '-0.5px' }}>
-            <AnimatedCounter value={value} />
+            <AnimatedCounter value={value} prefix={prefix} suffix={suffix} />
           </h2>
           {subtitle && (
             <p className="small mt-1.5 mb-0 dashboard-card-subtitle" style={{ fontSize: '0.8rem' }}>

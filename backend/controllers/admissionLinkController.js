@@ -11,7 +11,7 @@ const bcrypt = require('bcryptjs');
 const pool = require('../config/db');
 const { successResponse, errorResponse } = require('../utils/responseHelper');
 const { createNotification } = require('../utils/notificationHelper');
-const { sendStudentWelcomeEmail } = require('../utils/emailService');
+const { sendStudentWelcomeEmail, sendAdmissionConfirmationEmail } = require('../utils/emailService');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -204,7 +204,7 @@ const getAdmissionLinkInfo = async (req, res) => {
     if (links.length === 0) return errorResponse(res, 404, 'Admission link not found');
 
     const link = links[0];
-    if (link.status !== 'ACTIVE' && link.status !== 'OPENED' && link.status !== 'IN_PROGRESS') {
+    if (!['ACTIVE', 'OPENED', 'IN_PROGRESS', 'USED'].includes(link.status)) {
       return errorResponse(res, 400, 'This admission link is no longer active');
     }
     if (link.expires_at && new Date() > new Date(link.expires_at)) {
@@ -249,7 +249,7 @@ const submitAdmissionForm = async (req, res) => {
       return errorResponse(res, 404, 'Admission link not found');
     }
     const link = links[0];
-    if (!['ACTIVE', 'OPENED', 'IN_PROGRESS'].includes(link.status)) {
+    if (!['ACTIVE', 'OPENED', 'IN_PROGRESS', 'USED'].includes(link.status)) {
       await connection.rollback();
       return errorResponse(res, 400, 'This admission link is no longer active');
     }
@@ -390,9 +390,7 @@ const submitAdmissionForm = async (req, res) => {
       await connection.query('UPDATE coupons SET current_uses = current_uses + 1 WHERE id = ?', [couponId]);
     }
 
-    // Update link status
-    await connection.query('UPDATE admission_links SET status = "USED" WHERE id = ?', [link.id]);
-
+    // Keep link ACTIVE so multiple students can apply via the same shared link
     await connection.commit();
 
     // Notify assigned sales executive & all admins of new submission
@@ -414,6 +412,21 @@ const submitAdmissionForm = async (req, res) => {
         'ADMISSION', 'admission', admissionId
       ).catch(() => {});
     });
+
+    // Send confirmation email to the student
+    let appliedCourseName = null;
+    if (effectiveCourseId) {
+      const [courseRow] = await pool.query('SELECT name FROM courses WHERE id = ?', [effectiveCourseId]);
+      if (courseRow.length > 0) appliedCourseName = courseRow[0].name;
+    }
+    sendAdmissionConfirmationEmail({
+      toEmail: email.trim().toLowerCase(),
+      studentName: full_name.trim(),
+      admissionNumber,
+      courseName: appliedCourseName,
+      netPayable,
+      currency: selectedCurrency === 'ANY' ? 'INR' : selectedCurrency
+    }).catch(() => {});
 
     return successResponse(res, 201, 'Admission form submitted successfully! We will review your application shortly.', {
       admissionNumber,

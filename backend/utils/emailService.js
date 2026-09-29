@@ -202,6 +202,47 @@ const sendMockInterviewEmail = async ({ toEmail, studentName, topic, scheduledDa
 };
 
 /**
+ * Send Mock Interview Request Notification Email to Trainer
+ */
+const sendMockInterviewRequestTrainerEmail = async ({ trainerEmail, trainerName, studentName, topic, scheduledDate, preferredSlot, remarks }) => {
+  try {
+    const mailOptions = {
+      from: `"CampusFlow Placements" <${process.env.EMAIL_USER || 'campus18flow@gmail.com'}>`,
+      to: trainerEmail,
+      subject: `🎙️ New Mock Interview Request from Student: ${studentName}`,
+      html: `
+        <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; padding: 24px; background-color: #f8fafc; color: #0f172a;">
+          <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <div style="margin-bottom: 20px;">
+              <h2 style="color: #2563eb; margin: 0; font-size: 22px; font-weight: 800;">CampusFlow Mock Interview Request</h2>
+              <span style="background-color: #3b82f6; color: #ffffff; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; display: inline-block; margin-top: 6px;">
+                ACTION REQUIRED
+              </span>
+            </div>
+            <h3 style="color: #0f172a; margin-top: 0;">Hello ${trainerName || 'Trainer'},</h3>
+            <p style="color: #475569;">Student <strong>${studentName}</strong> has requested a 1-on-1 technical mock interview session with you.</p>
+            <div style="background-color: #eff6ff; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #2563eb; color: #1e293b; line-height: 1.6;">
+              <p style="margin: 4px 0;"><strong>📚 Topic / Focus Domain:</strong> ${topic}</p>
+              <p style="margin: 4px 0;"><strong>📅 Requested Date & Time:</strong> ${scheduledDate}</p>
+              ${preferredSlot ? `<p style="margin: 4px 0;"><strong>⏰ Preferred Slot:</strong> ${preferredSlot}</p>` : ''}
+              ${remarks ? `<p style="margin: 4px 0;"><strong>📝 Notes / Remarks:</strong> ${remarks}</p>` : ''}
+            </div>
+            <p style="color: #475569;">Please log in to your CampusFlow portal to <strong>Accept</strong> or <strong>Reject</strong> this mock interview request.</p>
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+            <p style="color: #94a3b8; font-size: 12px; text-align: center;">© 2026 CampusFlow Administration. Automated Trainer Notification.</p>
+          </div>
+        </div>
+      `
+    };
+
+    await dispatchMail(mailOptions);
+    console.log(`✓ Mock request email dispatched to Trainer: ${trainerEmail}`);
+  } catch (error) {
+    console.error('Failed to send mock request email to trainer:', error.message);
+  }
+};
+
+/**
  * 5. Send Broadcast Notice Email
  */
 const sendBroadcastNoticeEmail = async ({ toEmail, recipientName, noticeTitle, priority, content, senderName }) => {
@@ -518,6 +559,7 @@ module.exports = {
   sendAssignmentGradedEmail,
   sendPaymentReceiptEmail,
   sendMockInterviewEmail,
+  sendMockInterviewRequestTrainerEmail,
   sendBroadcastNoticeEmail,
   sendEnrollmentDecisionEmail,
   sendBatchScheduleUpdateEmail,

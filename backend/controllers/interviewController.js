@@ -1,6 +1,6 @@
 const pool = require('../config/db');
 const { successResponse, errorResponse } = require('../utils/responseHelper');
-const { sendMockInterviewEmail } = require('../utils/emailService');
+const { sendMockInterviewEmail, sendMockInterviewRequestTrainerEmail } = require('../utils/emailService');
 
 /**
  * GET /api/mock-interviews
@@ -183,9 +183,45 @@ const requestMockInterview = async (req, res) => {
       [student.id, assignedTrainer, batch_id || null, scheduled_date, topic, preferred_slot || null, remarks || null]
     );
 
+    // 4. Query assigned Trainer user details
+    const [trainerUsers] = await conn.query(
+      `SELECT t.id as trainer_id, u.id as user_id, u.full_name, u.email 
+       FROM trainers t 
+       JOIN users u ON t.user_id = u.id 
+       WHERE t.id = ?`,
+      [assignedTrainer]
+    );
+
+    if (trainerUsers.length > 0) {
+      const trainer = trainerUsers[0];
+      const studentName = req.user.full_name || 'Student';
+
+      // Insert in-app notification for Trainer
+      await conn.query(
+        "INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, 'INTERVIEW')",
+        [
+          trainer.user_id,
+          `🎙️ New Mock Interview Request from ${studentName}`,
+          `Student ${studentName} requested a mock interview session on topic: "${topic}" for ${scheduled_date}.`,
+          'INTERVIEW'
+        ]
+      );
+
+      // Dispatch Email Notification to Trainer
+      sendMockInterviewRequestTrainerEmail({
+        trainerEmail: trainer.email,
+        trainerName: trainer.full_name,
+        studentName,
+        topic,
+        scheduledDate: scheduled_date,
+        preferredSlot: preferred_slot || 'Flexible Slot',
+        remarks
+      }).catch(err => console.error('Trainer email error:', err.message));
+    }
+
     await conn.commit();
 
-    return successResponse(res, 201, 'Mock interview request submitted successfully! Awaiting Trainer confirmation.', {
+    return successResponse(res, 201, 'Mock interview request submitted successfully! Trainer notified via email & in-app notification.', {
       interviewId: result.insertId
     });
   } catch (error) {
